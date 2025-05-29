@@ -1,0 +1,44 @@
+import OllamaBackend from "./backends/Ollama.svelte";
+import type { Chat } from "./Chat";
+import type { Model } from "./LLMBackend";
+
+export default class AppContext {
+    private static instance?: AppContext;
+
+    public static getInstance(): AppContext {
+        if(!AppContext.instance) {
+            AppContext.instance = new AppContext();
+        }
+        return AppContext.instance;
+    }
+
+    constructor() {
+        this.ollamaBackend = new OllamaBackend();
+    }
+
+    private ollamaBackend: OllamaBackend;
+    private _models: Model[] = $state([]);
+
+    chats: Chat[] = $state([]);
+
+    get ollama(): OllamaBackend {
+        return this.ollamaBackend;
+    }
+
+    get models(): Model[] {
+        return this._models;
+    }
+
+    async updateModels(): Promise<Model[]> {
+        return this._models = await this.ollamaBackend.updateModels();
+    }
+
+    newChat(): Chat {
+        const chat: Chat = {
+            title: "New Chat",
+            history: []
+        }
+        this.chats.push(chat);
+        return chat;
+    }
+}
