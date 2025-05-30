@@ -44,5 +44,31 @@ export interface Model {
      */
     unload(): Promise<void>;
 
-    prompt(content: ChatMessage, history?: ChatMessage[]): AsyncIterable<ChatResponse>;
+    prompt(content: ChatMessage, history?: ChatMessage[], think?: boolean): AsyncIterable<ChatResponse>;
+}
+
+export async function generateTitle(userMsg: ChatMessage, model: Model): Promise<string> {
+    let title = "";
+    const instruction: ChatMessage[] = [
+        {
+            role: "system",
+            content: 
+            `You generate a brief title or summary for the given user prompt.
+            The title should not be longer than five words and not empty.`
+        }
+    ];
+    for await(const chunk of model.prompt(userMsg, instruction, false)) {
+        title += chunk.message.content;
+    }
+    return title;//.split(' ').slice(0,5).join(' ');
+}
+
+export function prependAssistantContext(history: ChatMessage[]): ChatMessage[] {
+    const assistant: ChatMessage = {
+        role: "system",
+        content: 
+        `You are a helpful assistant!
+        You may use Markdown in your answers at your own discretion!`
+    };
+    return [assistant, ...history];
 }

@@ -40,6 +40,7 @@
         {#each props.chatTitles as title, idx}
             <SidebarItem
                 activeClass="flex items-center p-2 text-base font-normal text-white bg-primary-600 dark:bg-primary-700 rounded-lg dark:text-white hover:bg-primary-800 dark:hover:bg-primary-800"
+                spanClass="ms-3 truncate"
                 label={title}
                 active={selectedChatIdx == idx}
                 onclick={(_) => onChatClicked(idx)}
