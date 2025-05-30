@@ -144,13 +144,14 @@ export class OllamaModel implements Model {
         return Promise.resolve();
     }
 
-    async* prompt(content: ChatMessage, history?: ChatMessage[]): AsyncIterable<ChatResponse> {
+    async* prompt(content: ChatMessage, history?: ChatMessage[], think: boolean = true): AsyncIterable<ChatResponse> {
         history ??= [];
         const res = await (this.backend as OllamaBackend).callBackend("/chat", {
             method: "POST",
             headers: {'content-type': "application/json"},
             body: JSON.stringify({
                 model: this.id,
+                think,
                 messages: [
                     ...history,
                     content

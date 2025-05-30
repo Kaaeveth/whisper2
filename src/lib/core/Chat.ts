@@ -5,6 +5,7 @@ export interface ChatMessage {
     role: Role;
     content: string;
     images?: Base64[];
+    thinking?: string
 }
 
 export interface ChatRequest {
