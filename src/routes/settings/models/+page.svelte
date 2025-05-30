@@ -16,7 +16,7 @@
             <RefreshOutline class="h-6 w-6"></RefreshOutline>
         </Button>
     </div>
-    <Table>
+    <Table striped hoverable border={false}>
         <TableHead>
             <TableHeadCell class="dark:text-white">Model name</TableHeadCell>
             <TableHeadCell class="dark:text-white">Provider</TableHeadCell>
@@ -45,7 +45,7 @@
         </TableBody>
     </Table>
 
-    <div class="border-b border-gray-400 my-2"></div>
+    <div class="border-b border-gray-400 my-4"></div>
 
     <Heading tag="h4" class="font-medium mb-4">Ollama</Heading>
     <div class="grid gap-3 gap-y-2 grid-cols-3 w-3/4">
