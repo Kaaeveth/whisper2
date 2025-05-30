@@ -1,5 +1,8 @@
-use std::{process::{Command, Output}, str};
 use serde::ser::SerializeStruct;
+use std::{
+    process::{Command, Output},
+    str,
+};
 
 use crate::errors;
 
@@ -7,9 +10,7 @@ pub struct CommandOutput(Output);
 
 #[tauri::command]
 pub async fn execute(cmd: &str, args: Vec<String>) -> Result<CommandOutput, errors::Error> {
-    let res = Command::new(cmd)
-        .args(args)
-        .output()?;
+    let res = Command::new(cmd).args(args).output()?;
     Ok(CommandOutput(res))
 }
 
@@ -25,9 +26,7 @@ pub async fn terminate(process: &str) -> Result<(), errors::Error> {
     }
     #[cfg(not(windows))]
     {
-        let _ = Command::new("pkill")
-            .args(["-f", process])
-            .status()?;
+        let _ = Command::new("pkill").args(["-f", process]).status()?;
     }
     Ok(())
 }
@@ -35,7 +34,7 @@ pub async fn terminate(process: &str) -> Result<(), errors::Error> {
 impl serde::Serialize for CommandOutput {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer 
+        S: serde::Serializer,
     {
         let out = &self.0;
         let mut res = serializer.serialize_struct("Output", 3)?;

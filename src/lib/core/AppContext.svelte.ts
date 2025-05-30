@@ -16,6 +16,7 @@ export default class AppContext {
         this.ollamaBackend = new OllamaBackend();
     }
 
+    private isInit: boolean = false;
     private ollamaBackend: OllamaBackend;
     private _models: Model[] = $state([]);
 
@@ -27,6 +28,17 @@ export default class AppContext {
 
     get models(): Model[] {
         return this._models;
+    }
+
+    /**
+     * Setup for all backends.
+     * Should be called once at application startup.
+     */
+    async init(): Promise<void> {
+        if(this.isInit) return;
+        await this.updateModels();
+        // TODO: load saved state (Chats, ...)
+        this.isInit = true;
     }
 
     async updateModels(): Promise<Model[]> {

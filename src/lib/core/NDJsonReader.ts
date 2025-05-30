@@ -1,3 +1,5 @@
+import Uint8Buffer from "./UInt8Buffer";
+
 /**
  * Deserializes a stream of newline delimited JSON
  * @param body A stream containing newline delimited JSON objects
@@ -26,6 +28,7 @@ export default async function* readNdJson<T>(body: ReadableStream<Uint8Array>): 
             buffer.remove(0, delimiterIdx+1);
         }
     } finally {
-        body.cancel();
+        if(!body.locked)
+            body.cancel();
     }
 }

@@ -1,4 +1,4 @@
-class Uint8Buffer {
+export default class Uint8Buffer {
   private innerBuffer: ArrayBuffer;
   private buffer: Uint8Array;
   private _length: number;

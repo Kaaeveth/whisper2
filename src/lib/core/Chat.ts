@@ -4,7 +4,7 @@ export type Base64 = string;
 export interface ChatMessage {
     role: Role;
     content: string;
-    images: Base64[];
+    images?: Base64[];
 }
 
 export interface ChatRequest {

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { fetch } from "@tauri-apps/plugin-http";
 import type { Backend, Capability, Model } from "$lib/core/LLMBackend";
 import type { ChatMessage, ChatResponse } from "$lib/core/Chat";
 import readNdJson from "../NDJsonReader";
@@ -9,6 +10,12 @@ export default class OllamaBackend implements Backend {
     readonly apiUrl: URL = new SvelteURL("http://localhost:11434/api");
 
     async callBackend(endpoint: string, fetchParams?: RequestInit) {
+        // Remove Origin to disable CORS
+        // We do this since we cannot set the allowed origins for Ollama
+        fetchParams ??= {};
+        fetchParams.headers ??= {};
+        (fetchParams.headers as any).Origin = "";
+
         const res = await fetch(this.apiUrl+endpoint, fetchParams);
         if(!res.ok) {
             throw new Error(`[OllamaBackend] Calling backend returned ${res.status}: ${res.statusText}`);
@@ -53,7 +60,7 @@ export default class OllamaBackend implements Backend {
                 cache: "no-store",
                 signal: AbortSignal.timeout(5000)
             });
-            return res.status < 500;
+            return res.status < 500 && res.status != 403;
         } catch {
             return false;
         }
@@ -155,6 +162,9 @@ export class OllamaModel implements Model {
             throw new Error("[OllamaModel] Missing body in response");
         }
 
-        return readNdJson<ChatResponse>(res.body!);
+        for await(const chunk of readNdJson<ChatResponse>(res.body!)) {
+            yield chunk;
+            if(chunk.done) break;
+        }
     }
 }
