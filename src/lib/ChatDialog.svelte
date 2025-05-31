@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Textarea, Button, Card, Checkbox } from "flowbite-svelte";
+    import { Textarea, Button, Card, Checkbox, Spinner } from "flowbite-svelte";
     import { CaretRightOutline } from "flowbite-svelte-icons";
     import type { Chat, ChatMessage } from "./core/Chat";
     import { generateTitle, prependAssistantContext, type Model } from "./core/LLMBackend";
@@ -12,8 +12,12 @@
 
     let props: Props = $props();
     let inputChatMsg: string = $state("");
-    let think: boolean = $state(false);
-    let generating: boolean = $state(false);
+    let think: boolean = $state(false); // Use "thinking" of the model
+    let generating: boolean = $state(false); // Is a prompt being answered?
+    let chatContainer: HTMLDivElement | undefined = $state();
+
+    const scrollToLastChatMsg = () => 
+        chatContainer?.scrollTo({behavior: "smooth", top: chatContainer!.scrollHeight});
 
     /**
      * Submits the entered message to the model
@@ -32,6 +36,8 @@
         // TODO: handle errors
         try {
             generating = true;
+            scrollToLastChatMsg();
+
             const userPrompt: ChatMessage = {
                 content: inputChatMsg,
                 role: "user"
@@ -47,6 +53,7 @@
 
             for await(const res of promptResponse) {
                 answer.content += res.message.content;
+                scrollToLastChatMsg();
             }
 
             if(needsTitle)
@@ -65,8 +72,8 @@
     }
 </script>
 
-<div class="flex flex-col h-full lg:w-4xl w-auto mx-auto">
-    <div class="flex flex-col grow-1 overflow-y-auto gap-4 justify-start">
+<div class="flex flex-col h-95/100 lg:w-4xl w-auto mx-auto">
+    <div bind:this={chatContainer} class="flex flex-col grow-1 overflow-y-auto gap-3 justify-start">
         {#if !props.chat}
             <p class="m-auto text-2xl font-medium text-black dark:text-white">
                 Start a new chat below
@@ -75,7 +82,11 @@
             {#each props.chat.history as msg}
                 <div class:justify-items-end={msg.role == "user"}>
                     <Card class="p-3 dark:text-white" shadow="sm" horizontal size="lg">
-                        {msg.content}
+                        {#if msg.content.length > 0}
+                            {msg.content}
+                        {:else}
+                            <Spinner class="mx-auto"></Spinner>
+                        {/if}
                     </Card>
                 </div>
             {/each}
@@ -87,8 +98,7 @@
             <Textarea
                 disabled={!!!props.model || generating}
                 onkeydown={onMessageKeyDown}
-                clearable class="mb-4" placeholder="Ask me anything"
-                rows={2}
+                clearable class="mb-4" placeholder="Ask me anything" rows={2}
                 bind:value={inputChatMsg}>
                 {#snippet footer()}
                 <div class="flex items-center h-3">
