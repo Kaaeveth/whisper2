@@ -151,6 +151,7 @@ export class OllamaModel implements Model {
             headers: {'content-type': "application/json"},
             body: JSON.stringify({
                 model: this.id,
+                keep_alive: "10m",
                 think,
                 messages: [
                     ...history,

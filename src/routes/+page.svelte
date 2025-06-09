@@ -10,6 +10,8 @@
     const ctx = AppContext.getInstance();
     const sidebar = new ToggableElement(true);
     
+    // State about all chats and the current selected one.
+    // Every child component uses theses states.
     let selectedChatIdx = $state(-1);
     const chatTitles = $derived(ctx.chats.map(c => c.title));
     const selectedChat: Chat | undefined = $derived.by(() => {

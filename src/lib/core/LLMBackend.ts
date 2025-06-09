@@ -68,7 +68,7 @@ export function prependAssistantContext(history: ChatMessage[]): ChatMessage[] {
         role: "system",
         content: 
         `You are a helpful assistant!
-        You may use Markdown in your answers at your own discretion!`
+        You may use Github-flavored Markdown in your answers at your own discretion (except for images)!`
     };
     return [assistant, ...history];
 }

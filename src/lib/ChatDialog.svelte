@@ -3,6 +3,7 @@
     import { CaretRightOutline } from "flowbite-svelte-icons";
     import type { Chat, ChatMessage } from "./core/Chat";
     import { generateTitle, prependAssistantContext, type Model } from "./core/LLMBackend";
+    import MarkdownIt from "markdown-it";
 
     interface Props {
         chat?: Chat;
@@ -10,9 +11,18 @@
         createChat: () => Chat;
     }
 
+    /** 
+     * NOTE: We currently render markdown with each new token
+     * returned by a model, which is quite inefficient.
+     * We should replace this with an incremental md parser in the future.
+     * For now, however, this solution is still relatively fast
+     * and not too resource heavy, especially for small responses.
+     * */
+    const md = MarkdownIt();
+
     let props: Props = $props();
     let inputChatMsg: string = $state("");
-    let think: boolean = $state(false); // Use "thinking" of the model
+    let think: boolean = $state(false); // Use "thinking" mode of the model
     let generating: boolean = $state(false); // Is a prompt being answered?
     let chatContainer: HTMLDivElement | undefined = $state();
 
@@ -47,7 +57,10 @@
                 prependAssistantContext(props.chat!.history),
                 think
             );
-            let answer: ChatMessage = $state({content: "", role: "assistant"});
+            let answer: ChatMessage = $state({
+                content: "",
+                role: "assistant"
+            });
             props.chat!.history.push(userPrompt, answer);
             inputChatMsg = "";
 
@@ -81,9 +94,9 @@
         {:else}
             {#each props.chat.history as msg}
                 <div class:justify-items-end={msg.role == "user"}>
-                    <Card class="p-3 dark:text-white" shadow="sm" horizontal size="lg">
+                    <Card class="p-3 dark:text-white flex-col!" shadow="sm" horizontal size="lg">
                         {#if msg.content.length > 0}
-                            {msg.content}
+                            {@html md.render(msg.content)}
                         {:else}
                             <Spinner class="mx-auto"></Spinner>
                         {/if}

@@ -36,11 +36,21 @@ export default class AppContext {
      */
     async init(): Promise<void> {
         if(this.isInit) return;
-        await this.updateModels();
-        // TODO: load saved state (Chats, ...)
-        this.isInit = true;
+        try {
+            await this.updateModels();
+            // TODO: load saved state (Chats, ...)
+            this.isInit = true;
+        } catch(e) {
+            console.error("Error initializing: "+e);
+        }
     }
 
+    /**
+     * Fetchs all available models of all backends.
+     * Note that this updates AppContext.models as well,
+     * which is a Svelte state.
+     * @returns Available Models of all backends
+     */
     async updateModels(): Promise<Model[]> {
         return this._models = await this.ollamaBackend.updateModels();
     }
