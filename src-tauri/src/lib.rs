@@ -6,10 +6,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![
-            commands::process_commands::execute,
-            commands::process_commands::terminate
-        ])
+        .plugin(commands::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
