@@ -43,7 +43,8 @@
             needsTitle = true;
         }
 
-        // TODO: handle errors
+        // Start generating a chat completion
+        // TODO: handle errors & abort
         try {
             generating = true;
             scrollToLastChatMsg();
@@ -52,9 +53,12 @@
                 content: inputChatMsg,
                 role: "user"
             };
+
+            // Generate chat completion
+            // We get a stream of strings, which we assemble below
             const promptResponse = props.model.prompt(
                 userPrompt,
-                prependAssistantContext(props.chat!.history),
+                prependAssistantContext($state.snapshot(props.chat!.history)),
                 think
             );
             let answer: ChatMessage = $state({
@@ -64,13 +68,17 @@
             props.chat!.history.push(userPrompt, answer);
             inputChatMsg = "";
 
+            // Assemble the completion
+            // Since the content is reactive, the UI gets
+            // updated automatically
             for await(const res of promptResponse) {
                 answer.content += res.message.content;
                 scrollToLastChatMsg();
             }
 
+            // Generate title for the chat on first prompt
             if(needsTitle)
-                props.chat!.title = await generateTitle(userPrompt, props.model);
+                props.chat!.title = await generateTitle(props.model, $state.snapshot(props.chat!.history));
         } finally {
             generating = false;
         }

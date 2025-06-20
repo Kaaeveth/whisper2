@@ -47,23 +47,39 @@ export interface Model {
     prompt(content: ChatMessage, history?: ChatMessage[], think?: boolean): AsyncIterable<ChatResponse>;
 }
 
-export async function generateTitle(userMsg: ChatMessage, model: Model): Promise<string> {
+/**
+ * Generates a title for a chat history.
+ * The `history` needs to have at least two entries!
+ * @throws Error if the `history` has less than two entries.
+ * @param model The model to use
+ * @param history The chat history to generate a title for
+ * @returns A title
+ */
+export async function generateTitle(model: Model, history: ChatMessage[]): Promise<string> {
+    if(history.length < 2) {
+        throw new Error("Chat history needs at least two entries");
+    }
+    
     let title = "";
     const instruction: ChatMessage[] = [
         {
             role: "system",
             content: 
-            `You generate a brief title or summary for the given user prompt.
-            The title should not be longer than five words and not empty.`
-        }
+            `You generate a brief title for the given user prompt and chat history.
+            The title should not be longer than five words and not empty.
+            The title must not contain any Markdown or HTML.
+            Output only the title, nothing more!`
+        },
+        ...history
     ];
-    for await(const chunk of model.prompt(userMsg, instruction, false)) {
+    for await(const chunk of model.prompt(instruction[0], instruction, false)) {
         title += chunk.message.content;
     }
     return title;//.split(' ').slice(0,5).join(' ');
 }
 
 export function prependAssistantContext(history: ChatMessage[]): ChatMessage[] {
+    console.log(history);
     const assistant: ChatMessage = {
         role: "system",
         content: 
