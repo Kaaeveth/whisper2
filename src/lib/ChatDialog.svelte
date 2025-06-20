@@ -1,24 +1,15 @@
 <script lang="ts">
-    import { Textarea, Button, Card, Checkbox, Spinner } from "flowbite-svelte";
+    import { Textarea, Button, Card, Checkbox } from "flowbite-svelte";
+    import AssistantResponse from "./AssistantResponse.svelte";
     import { CaretRightOutline } from "flowbite-svelte-icons";
     import type { Chat, ChatMessage } from "./core/Chat";
     import { generateTitle, prependAssistantContext, type Model } from "./core/LLMBackend";
-    import MarkdownIt from "markdown-it";
 
     interface Props {
         chat?: Chat;
         model?: Model;
         createChat: () => Chat;
     }
-
-    /** 
-     * NOTE: We currently render markdown with each new token
-     * returned by a model, which is quite inefficient.
-     * We should replace this with an incremental md parser in the future.
-     * For now, however, this solution is still relatively fast
-     * and not too resource heavy, especially for small responses.
-     * */
-    const md = MarkdownIt();
 
     let props: Props = $props();
     let inputChatMsg: string = $state("");
@@ -94,22 +85,22 @@
 </script>
 
 <div class="flex flex-col h-95/100 lg:w-4xl w-auto mx-auto">
-    <div bind:this={chatContainer} class="flex flex-col grow-1 overflow-y-auto gap-3 justify-start">
+    <div bind:this={chatContainer} class="flex flex-col grow-1 overflow-y-auto gap-3">
         {#if !props.chat}
             <p class="m-auto text-2xl font-medium text-black dark:text-white">
                 Start a new chat below
             </p>
         {:else}
             {#each props.chat.history as msg}
-                <div class:justify-items-end={msg.role == "user"}>
-                    <Card class="p-3 dark:text-white flex-col!" shadow="sm" horizontal size="lg">
-                        {#if msg.content.length > 0}
-                            {@html md.render(msg.content)}
-                        {:else}
-                            <Spinner class="mx-auto"></Spinner>
-                        {/if}
-                    </Card>
-                </div>
+                {#if msg.role == "user"}
+                    <div class="lg:justify-items-end">
+                        <Card class="p-3 dark:text-white flex-col! shadow-none" horizontal size="lg">
+                            {msg.content}
+                        </Card>
+                    </div>
+                {:else}
+                    <AssistantResponse content={msg.content}></AssistantResponse>
+                {/if}
             {/each}
         {/if}
     </div>
