@@ -79,7 +79,6 @@ export async function generateTitle(model: Model, history: ChatMessage[]): Promi
 }
 
 export function prependAssistantContext(history: ChatMessage[]): ChatMessage[] {
-    console.log(history);
     const assistant: ChatMessage = {
         role: "system",
         content: 

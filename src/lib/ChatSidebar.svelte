@@ -36,7 +36,7 @@
             <Button onclick={(_) => onNewChat()} pill class="grow-1">New Chat</Button>
         </div>
     </SidebarGroup>
-    <SidebarGroup>
+    <SidebarGroup class="space-y-2 overflow-y-auto">
         {#each props.chatTitles as title, idx}
             <SidebarItem
                 activeClass="flex items-center p-2 text-base font-normal text-white bg-primary-600 dark:bg-primary-700 rounded-lg dark:text-white hover:bg-primary-800 dark:hover:bg-primary-800"
