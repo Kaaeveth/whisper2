@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { Sidebar, SidebarItem, SidebarGroup, Button, uiHelpers, sidebar } from "flowbite-svelte";
-    import { ToolsOutline } from "flowbite-svelte-icons";
+    import { Sidebar, SidebarItem, SidebarGroup, Button, Modal, Heading } from "flowbite-svelte";
+    import { ToolsOutline, TrashBinOutline } from "flowbite-svelte-icons";
     import SidebarButton from "$lib/SidebarButton.svelte";
     import ToggableElement from "$lib/ToggableElement.svelte";
     import { goto } from "$app/navigation";
@@ -8,6 +8,7 @@
     interface Props {
         chatTitles: string[];
         onNewChat?: Function;
+        onDeleteChat?: (idx: number) => void;
         selectedChatIdx?: number;
         sidebar: ToggableElement;
     };
@@ -20,6 +21,22 @@
 
     function onChatClicked(idx: number) {
         selectedChatIdx = idx;
+    }
+
+    // == Deleting chats ==
+    let confirmDeleteModalOpen = $state(false);
+    let deleteChatIdx = $state(-1);
+    let deletePromptChatTitle = $derived(props.chatTitles[deleteChatIdx]);
+
+    function promptDeleteChat(idx: number) {
+        if(idx < 0) return;
+        deleteChatIdx = idx;
+        confirmDeleteModalOpen = true;
+    }
+
+    function deletePromptedChat() {
+        if(props.onDeleteChat) props.onDeleteChat(deleteChatIdx);
+        confirmDeleteModalOpen = false;
     }
 </script>
 
@@ -39,12 +56,22 @@
     <SidebarGroup class="space-y-2 overflow-y-auto">
         {#each props.chatTitles as title, idx}
             <SidebarItem
-                activeClass="flex items-center p-2 text-base font-normal text-white bg-primary-600 dark:bg-primary-700 rounded-lg dark:text-white hover:bg-primary-800 dark:hover:bg-primary-800"
+                activeClass="flex items-center p-2 text-base font-normal text-white bg-primary-500 dark:bg-primary-900 rounded-lg dark:text-white hover:bg-gray-800 dark:hover:bg-gray-700"
                 spanClass="ms-3 truncate"
+                class="sideitem"
+                aClass="justify-between"
                 label={title}
                 active={selectedChatIdx == idx}
                 onclick={(_) => onChatClicked(idx)}
-            />
+            >
+                {#snippet subtext()}
+                    <TrashBinOutline 
+                        class="hidden dots"
+                        color={"red"}
+                        onclick={() => promptDeleteChat(idx)}>
+                    </TrashBinOutline>
+                {/snippet}
+            </SidebarItem>
         {/each}
     </SidebarGroup>
     <div class="mt-auto">
@@ -57,6 +84,17 @@
         </SidebarGroup>
     </div>
 </Sidebar>
+
+<Modal bind:open={confirmDeleteModalOpen}>
+    <Heading tag="h3">Delete Chat?</Heading>
+    <p>The chat <i>{deletePromptChatTitle}</i> will be deleted forever.</p>
+
+    {#snippet footer()}
+        <Button color="red" onclick={() => deletePromptedChat()}>Delete</Button>
+        <Button color="alternative" onclick={() => confirmDeleteModalOpen = false}>Abort</Button>
+    {/snippet}
+</Modal>
+
 {:else}
 <div class="px-3 py-4">
     <SidebarButton sidebar={props.sidebar}></SidebarButton>

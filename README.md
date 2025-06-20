@@ -6,7 +6,7 @@ Only Ollama is currently supported.
 
 ### TODO
 - [ ] Styling of assistant responses
-- [ ] Persistence of chats
+- [x] Persistence of chats
 - [ ] Custom Ollama Backend-Endpoint
 - [ ] Cancelation of chat completions
 - [ ] Import and Export of Chats

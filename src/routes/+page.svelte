@@ -38,6 +38,15 @@
         selectedChatIdx = ctx.chats.length-1; 
         return chat;
     }
+
+    async function deleteChat(idx: number) {
+        if(idx >= ctx.chats.length || idx < 0) {
+            console.error("Cannot delete chat: Idx out of bounds");
+            return;
+        }
+
+        await ctx.deleteChat(ctx.chats[idx]);
+    }
 </script>
 
 <div class="flex flex-row h-screen">
@@ -45,7 +54,8 @@
         chatTitles={chatTitles}
         bind:selectedChatIdx
         sidebar={sidebar}
-        onNewChat={clearSelectedChat}>
+        onNewChat={clearSelectedChat}
+        onDeleteChat={deleteChat}>
     </ChatSidebar>
     <div class="flex flex-col gap-2 p-4 grow-1" class:pl-0={!sidebar.open}>
         <div class="min-w-xs">

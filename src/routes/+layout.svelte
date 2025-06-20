@@ -16,5 +16,7 @@
 		</div>
 	{:then}
 		{@render children()}
+	{:catch e}
+		<p>Error: {e}</p>
 	{/await}
 </main>

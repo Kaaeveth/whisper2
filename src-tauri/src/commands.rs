@@ -1,4 +1,7 @@
-use tauri::{plugin::{TauriPlugin, Builder as PluginBuilder}, Runtime};
+use tauri::{
+    plugin::{Builder as PluginBuilder, TauriPlugin},
+    Runtime,
+};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod process_commands;

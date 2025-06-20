@@ -70,6 +70,8 @@
             // Generate title for the chat on first prompt
             if(needsTitle)
                 props.chat!.title = await generateTitle(props.model, $state.snapshot(props.chat!.history));
+
+            await props.chat!.save();
         } finally {
             generating = false;
         }

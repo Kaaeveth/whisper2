@@ -19,6 +19,9 @@ export interface ChatResponse {
 }
 
 export interface Chat {
+    uuid: string;
     title: string;
     history: ChatMessage[];
+    save: () => Promise<void>;
+    delete: () => Promise<void>;
 }

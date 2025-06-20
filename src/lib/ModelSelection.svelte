@@ -28,7 +28,7 @@
         </DropdownItem>
     {/each}
   </DropdownGroup>
-  <a href="/settings/models" class="text-primary-600 dark:text-primary-500 -mb-1 flex items-center bg-gray-50 px-3 py-2 text-sm font-medium hover:bg-gray-100 hover:underline dark:bg-gray-700 dark:hover:bg-gray-600">
+  <a href="/settings/models" class="text-primary-600 dark:text-primary-500 -mb-1 flex justify-center items-center bg-gray-50 px-3 py-2 text-sm font-medium hover:bg-gray-100 hover:underline dark:bg-gray-700 dark:hover:bg-gray-600">
     Add new models
   </a>
 </Dropdown>
