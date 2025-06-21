@@ -7,7 +7,7 @@
 
     interface Props {
         chatTitles: string[];
-        onNewChat?: Function;
+        onNewChat?: () => void;
         onDeleteChat?: (idx: number) => void;
         selectedChatIdx?: number;
         sidebar: ToggableElement;
@@ -25,8 +25,8 @@
 
     // == Deleting chats ==
     let confirmDeleteModalOpen = $state(false);
-    let deleteChatIdx = $state(-1);
-    let deletePromptChatTitle = $derived(props.chatTitles[deleteChatIdx]);
+    let deleteChatIdx = $state(-1); // Chat idx to be deleted
+    let deletePromptChatTitle = $derived(props.chatTitles[deleteChatIdx]); // Title of chat to be deleted
 
     function promptDeleteChat(idx: number) {
         if(idx < 0) return;
@@ -37,6 +37,7 @@
     function deletePromptedChat() {
         if(props.onDeleteChat) props.onDeleteChat(deleteChatIdx);
         confirmDeleteModalOpen = false;
+        deleteChatIdx = -1;
     }
 </script>
 

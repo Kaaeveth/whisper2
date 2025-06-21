@@ -1,9 +1,7 @@
 import OllamaBackend from "./backends/Ollama.svelte";
-import type { Chat } from "./Chat";
+import type { Chat, ChatMessage } from "./Chat";
 import type { Model } from "./LLMBackend";
 import { load, Store } from '@tauri-apps/plugin-store';
-
-type ChatStorage = Omit<Chat, "uuid" | "save" | "delete">;
 
 export default class AppContext {
     private static instance?: AppContext;
@@ -73,7 +71,12 @@ export default class AppContext {
      * @param chat The chat to save
      */
     async saveChat(chat: Chat) {
-        const snapshot: Partial<Chat> = $state.snapshot(chat) as Partial<Chat>;
+        let snapshot: Partial<Chat>;
+        if(chat instanceof ReactiveChat) {
+            snapshot = (chat as ReactiveChat).toPoco();
+        } else {
+            snapshot = $state.snapshot(chat) as Partial<Chat>;
+        }
         delete snapshot.uuid;
         this._chatStore.set(chat.uuid, snapshot);
     }
@@ -99,9 +102,11 @@ export default class AppContext {
             let chat = await this._chatStore.get<Chat>(chatId);
             if(chat) {
                 chat.uuid = chatId;
-                this._chats.push(chat);
+                chat.createdAt = new Date(chat.createdAt);
+                this._chats.push(new ReactiveChat(this, chat));
             }
         }
+        this._chats.sort((a,b) => b.createdAt.getUTCSeconds() - a.createdAt.getUTCSeconds());
     }
 
     /**
@@ -115,14 +120,55 @@ export default class AppContext {
     }
 
     newChat(): Chat {
-        const chat: Chat = $state({
-            uuid: crypto.randomUUID(),
-            title: "New Chat",
-            history: [],
-            save: () => this.saveChat(chat),
-            delete: () => this.deleteChat(chat)
-        });
-        this._chats.push(chat);
+        const chat: Chat = new ReactiveChat(this);
+        this._chats.unshift(chat);
         return chat;
+    }
+}
+
+class ReactiveChat implements Chat {
+    public title: string = $state("New Chat");
+    public history: ChatMessage[] = $state([]);
+    
+    private ctx: AppContext;
+    private _uuid: string;
+    private _createdAt: Date;
+
+    constructor(ctx: AppContext, chat?: Chat) {
+        this.ctx = ctx;
+        if(!chat){
+            this._uuid = crypto.randomUUID();
+            this._createdAt = new Date();
+        } else {
+            this._uuid = chat.uuid;
+            this._createdAt = chat.createdAt;
+            this.title = chat.title;
+            this.history = chat.history;
+        }
+    }
+
+    async save() {
+        await this.ctx.saveChat(this);
+    }
+
+    async delete() {
+        await this.ctx.deleteChat(this);
+    }
+
+    get uuid() {
+        return this._uuid;
+    }
+
+    get createdAt(): Date {
+        return this._createdAt;
+    }
+
+    toPoco(): Omit<Chat, "save"|"delete"> {
+        return {
+            title: $state.snapshot(this.title),
+            history: $state.snapshot(this.history),
+            uuid: this._uuid,
+            createdAt: this._createdAt
+        }
     }
 }

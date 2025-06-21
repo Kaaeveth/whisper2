@@ -35,7 +35,8 @@
 
     function newChat(): Chat {
         const chat = ctx.newChat();
-        selectedChatIdx = ctx.chats.length-1; 
+        // The first chat is the newly created one
+        selectedChatIdx = 0;
         return chat;
     }
 

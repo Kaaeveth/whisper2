@@ -8,7 +8,7 @@ Only Ollama is currently supported.
 - [ ] Styling of assistant responses
 - [x] Persistence of chats
 - [ ] Custom Ollama Backend-Endpoint
-- [ ] Cancelation of chat completions
+- [x] Cancelation of chat completions
 - [ ] Import and Export of Chats
 - [ ] Support for fetching Ollama models.
 - [ ] Support for vision models

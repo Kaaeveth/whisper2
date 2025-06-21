@@ -22,6 +22,7 @@ export interface Chat {
     uuid: string;
     title: string;
     history: ChatMessage[];
+    createdAt: Date;
     save: () => Promise<void>;
     delete: () => Promise<void>;
 }

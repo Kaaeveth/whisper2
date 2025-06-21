@@ -68,7 +68,7 @@ export async function generateTitle(model: Model, history: ChatMessage[]): Promi
             `You generate a brief title for the given user prompt and chat history.
             The title should not be longer than five words and not empty.
             The title must not contain any Markdown or HTML.
-            Output only the title, nothing more!`
+            You must only output the title and nothing more!`
         },
         ...history
     ];

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Textarea, Button, Card, Checkbox } from "flowbite-svelte";
     import AssistantResponse from "./AssistantResponse.svelte";
-    import { CaretRightOutline } from "flowbite-svelte-icons";
+    import { CaretRightOutline, StopOutline } from "flowbite-svelte-icons";
     import type { Chat, ChatMessage } from "./core/Chat";
     import { generateTitle, prependAssistantContext, type Model } from "./core/LLMBackend";
 
@@ -15,6 +15,7 @@
     let inputChatMsg: string = $state("");
     let think: boolean = $state(false); // Use "thinking" mode of the model
     let generating: boolean = $state(false); // Is a prompt being answered?
+    let abort: boolean = $state(false); // true if current completion should be aborted
     let chatContainer: HTMLDivElement | undefined = $state();
 
     const scrollToLastChatMsg = () => 
@@ -65,6 +66,10 @@
             for await(const res of promptResponse) {
                 answer.content += res.message.content;
                 scrollToLastChatMsg();
+                if(abort) {
+                    abort = false;
+                    break;
+                }
             }
 
             // Generate title for the chat on first prompt
@@ -74,6 +79,7 @@
             await props.chat!.save();
         } finally {
             generating = false;
+            abort = false;
         }
     }
 
@@ -95,7 +101,7 @@
         {:else}
             {#each props.chat.history as msg}
                 {#if msg.role == "user"}
-                    <div class="lg:justify-items-end">
+                    <div class="lg:justify-items-end my-2">
                         <Card class="p-3 dark:text-white flex-col! shadow-none" horizontal size="lg">
                             {msg.content}
                         </Card>
@@ -117,10 +123,18 @@
                 {#snippet footer()}
                 <div class="flex items-center h-3">
                     <Checkbox bind:checked={think}>Think</Checkbox>
-                    <Button disabled={generating} pill outline
-                            type="submit" class="p-0 border-0 ml-auto">
-                        <CaretRightOutline size="xl"></CaretRightOutline>
-                    </Button>
+                    {#if !generating}
+                        <Button disabled={generating} pill outline
+                                type="submit" class="p-0 border-0 ml-auto">
+                            <CaretRightOutline size="xl"></CaretRightOutline>
+                        </Button>
+                    {:else}
+                        <Button 
+                            onclick={() => abort = true}
+                            disabled={!generating} pill outline class="p-0 border-0 ml-auto">
+                            <StopOutline size="xl"></StopOutline>
+                        </Button>
+                    {/if}
                 </div>
                 {/snippet}
             </Textarea>
