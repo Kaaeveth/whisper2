@@ -58,6 +58,9 @@ export default class OllamaBackend implements Backend {
             const res = await fetch(this.apiUrl, {
                 method: "head",
                 cache: "no-store",
+                headers: {
+                    origin: ""
+                },
                 signal: AbortSignal.timeout(5000)
             });
             return res.status < 500 && res.status != 403;
