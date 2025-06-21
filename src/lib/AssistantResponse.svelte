@@ -8,7 +8,7 @@
      * For now, however, this solution is still relatively fast
      * and not too resource heavy, especially for small responses.
      * */
-    const md = MarkdownIt();
+    const md = MarkdownIt({linkify: true});
 </script>
 
 <script lang="ts">
