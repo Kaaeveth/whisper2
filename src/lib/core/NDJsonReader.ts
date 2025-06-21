@@ -29,6 +29,6 @@ export default async function* readNdJson<T>(body: ReadableStream<Uint8Array>): 
         }
     } finally {
         if(!body.locked)
-            body.cancel();
+            await body.cancel();
     }
 }

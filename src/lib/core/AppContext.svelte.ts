@@ -1,7 +1,7 @@
 import OllamaBackend from "./backends/Ollama.svelte";
 import type { Chat, ChatMessage } from "./Chat";
 import type { Model } from "./LLMBackend";
-import { load, Store } from '@tauri-apps/plugin-store';
+import { load, type Store } from '@tauri-apps/plugin-store';
 
 export default class AppContext {
     private static instance?: AppContext;
@@ -18,6 +18,7 @@ export default class AppContext {
     }
 
     private isInit: boolean = false;
+    private _status: AppStatus = $state({status: "ok", msg: ""});
     private ollamaBackend: OllamaBackend;
     private _models: Model[] = $state([]);
 
@@ -48,13 +49,35 @@ export default class AppContext {
 
         try {
             this._chatStore = await load("chats.json");
-            await this.updateModels();
             await this.loadChats();
+
+            // Check if Ollama is running
+            if(await this.ollamaBackend.running()) {
+                await this.updateModels();
+            } else {
+                this.statusMsg = "Ollama is not running";
+                this.status = "warn";
+            }
+
             this.isInit = true;
         } catch(e) {
             console.error("Error initializing: "+e);
+            this._status.status = "error";
+            this.statusMsg = String(e);
             throw e;
         }
+    }
+
+    set statusMsg(msg: string) {
+        this._status.msg = msg;
+    }
+
+    set status(status: AppStatus["status"]) {
+        this._status.status = status;
+    }
+
+    get status(): AppStatus {
+        return this._status;
     }
 
     /**
@@ -106,7 +129,7 @@ export default class AppContext {
                 this._chats.push(new ReactiveChat(this, chat));
             }
         }
-        this._chats.sort((a,b) => b.createdAt.getUTCSeconds() - a.createdAt.getUTCSeconds());
+        this._chats.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
     /**
@@ -171,4 +194,9 @@ class ReactiveChat implements Chat {
             createdAt: this._createdAt
         }
     }
+}
+
+export interface AppStatus {
+    status: "ok"|"warn"|"error";
+    msg: string;
 }

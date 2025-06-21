@@ -6,6 +6,7 @@
     import ChatDialog from "$lib/ChatDialog.svelte";
     import ModelSelection from "$lib/ModelSelection.svelte";
     import type { Snapshot } from "./$types";
+    import StatusDisplay from "$lib/StatusDisplay.svelte";
 
     const ctx = AppContext.getInstance();
     const sidebar = new ToggableElement(true);
@@ -59,8 +60,9 @@
         onDeleteChat={deleteChat}>
     </ChatSidebar>
     <div class="flex flex-col gap-2 p-4 grow-1" class:pl-0={!sidebar.open}>
-        <div class="min-w-xs">
+        <div class="flex min-w-xs gap-5">
             <ModelSelection models={ctx.models} bind:selectedModel></ModelSelection>
+            <StatusDisplay></StatusDisplay>
         </div>
         <ChatDialog 
            chat={selectedChat}

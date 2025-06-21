@@ -15,8 +15,13 @@
     let inputChatMsg: string = $state("");
     let think: boolean = $state(false); // Use "thinking" mode of the model
     let generating: boolean = $state(false); // Is a prompt being answered?
-    let abort: boolean = $state(false); // true if current completion should be aborted
     let chatContainer: HTMLDivElement | undefined = $state();
+
+    // Ctrl for aborting chat completions
+    // NOTE: The tauri http-plugin currently doesn't close the http response stream
+    //       when cancelling a request. Meaning Ollama will continue generating tokens.
+    // see: https://github.com/tauri-apps/plugins-workspace/pull/2562
+    let promptAbortController = new AbortController();
 
     const scrollToLastChatMsg = () => 
         chatContainer?.scrollTo({behavior: "smooth", top: chatContainer!.scrollHeight});
@@ -51,7 +56,7 @@
             const promptResponse = props.model.prompt(
                 userPrompt,
                 prependAssistantContext($state.snapshot(props.chat!.history)),
-                think
+                {think, abort: promptAbortController.signal}
             );
             let answer: ChatMessage = $state({
                 content: "",
@@ -62,24 +67,26 @@
 
             // Assemble the completion
             // Since the content is reactive, the UI gets
-            // updated automatically
-            for await(const res of promptResponse) {
-                answer.content += res.message.content;
-                scrollToLastChatMsg();
-                if(abort) {
-                    abort = false;
-                    break;
+            // updated automatically.
+            // If the completion gets cancelled, an exception gets thrown
+            // but we still generate a title and save the chat.
+            try {
+                for await(const res of promptResponse) {
+                    answer.content += res.message.content;
+                    scrollToLastChatMsg();
                 }
+            } finally {
+                // Generate title for the chat on first prompt
+                if(needsTitle)
+                    props.chat!.title = await generateTitle(props.model, $state.snapshot(props.chat!.history));
+    
+                await props.chat!.save();
             }
 
-            // Generate title for the chat on first prompt
-            if(needsTitle)
-                props.chat!.title = await generateTitle(props.model, $state.snapshot(props.chat!.history));
-
-            await props.chat!.save();
         } finally {
             generating = false;
-            abort = false;
+            promptAbortController.abort();
+            promptAbortController = new AbortController();
         }
     }
 
@@ -130,7 +137,7 @@
                         </Button>
                     {:else}
                         <Button 
-                            onclick={() => abort = true}
+                            onclick={() => promptAbortController.abort()}
                             disabled={!generating} pill outline class="p-0 border-0 ml-auto">
                             <StopOutline size="xl"></StopOutline>
                         </Button>

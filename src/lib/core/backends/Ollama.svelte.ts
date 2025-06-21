@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
-import type { Backend, Capability, Model } from "$lib/core/LLMBackend";
+import type { Backend, Capability, Model, PromptOptions } from "$lib/core/LLMBackend";
 import type { ChatMessage, ChatResponse } from "$lib/core/Chat";
 import readNdJson from "../NDJsonReader";
 import { SvelteURL } from "svelte/reactivity";
@@ -144,15 +144,16 @@ export class OllamaModel implements Model {
         return Promise.resolve();
     }
 
-    async* prompt(content: ChatMessage, history?: ChatMessage[], think: boolean = true): AsyncIterable<ChatResponse> {
+    async* prompt(content: ChatMessage, history?: ChatMessage[], options?: PromptOptions): AsyncIterable<ChatResponse> {
         history ??= [];
         const res = await (this.backend as OllamaBackend).callBackend("/chat", {
             method: "POST",
             headers: {'content-type': "application/json"},
+            signal: options?.abort,
             body: JSON.stringify({
                 model: this.id,
                 keep_alive: "10m",
-                think,
+                think: options?.think ?? false,
                 messages: [
                     ...history,
                     content

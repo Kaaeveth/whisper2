@@ -44,7 +44,12 @@ export interface Model {
      */
     unload(): Promise<void>;
 
-    prompt(content: ChatMessage, history?: ChatMessage[], think?: boolean): AsyncIterable<ChatResponse>;
+    prompt(content: ChatMessage, history?: ChatMessage[], options?: PromptOptions): AsyncIterable<ChatResponse>;
+}
+
+export interface PromptOptions {
+    think?: boolean;
+    abort?: AbortSignal;
 }
 
 /**
@@ -72,7 +77,7 @@ export async function generateTitle(model: Model, history: ChatMessage[]): Promi
         },
         ...history
     ];
-    for await(const chunk of model.prompt(instruction[0], instruction, false)) {
+    for await(const chunk of model.prompt(instruction[0], instruction)) {
         title += chunk.message.content;
     }
     return title;//.split(' ').slice(0,5).join(' ');
