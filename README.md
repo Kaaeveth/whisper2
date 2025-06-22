@@ -1,14 +1,25 @@
 # Whisper2
 
 **Work in progess**<br>
-Simple chat client for large language models.
+Small and simple desktop chat client for large language models.
 Only Ollama is currently supported.
 
-### TODO
+## Compiling
+Development:
+```
+npm run tauri dev
+```
+
+Release (single executable):
+```
+npm run tauri build -- --no-bundle
+```
+
+## TODO
 - [x] Styling of assistant responses
 - [x] Persistence of chats
-- [ ] Custom Ollama Backend-Endpoint
 - [x] Cancelation of chat completions
+- [ ] Configuration of Ollama backend
 - [ ] Import and Export of Chats
-- [ ] Support for fetching Ollama models.
+- [ ] Proper dark mode
 - [ ] Support for vision models
