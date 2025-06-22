@@ -1,16 +1,14 @@
-use tauri::{
-    plugin::{Builder as PluginBuilder, TauriPlugin},
-    Runtime,
-};
-
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-mod process_commands;
+pub(crate) mod process_commands;
 
-pub fn init<R: Runtime>() -> TauriPlugin<R> {
-    PluginBuilder::new("commands")
-        .invoke_handler(tauri::generate_handler![
-            process_commands::execute,
-            process_commands::terminate
-        ])
-        .build()
+#[macro_export]
+macro_rules! init {
+    () => {
+        tauri::generate_handler![
+            crate::commands::process_commands::execute,
+            crate::commands::process_commands::terminate
+        ]
+    };
 }
+
+pub(crate) use init;
