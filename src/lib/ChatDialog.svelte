@@ -99,24 +99,26 @@
     }
 </script>
 
-<div class="flex flex-col h-95/100 lg:w-4xl w-auto mx-auto">
-    <div bind:this={chatContainer} class="flex flex-col grow-1 overflow-y-auto gap-3">
+<div class="flex flex-col h-95/100 w-full">
+    <div bind:this={chatContainer} class="flex flex-col grow-1 overflow-y-auto gap-3 w-full">
         {#if !props.chat}
-            <p class="m-auto text-2xl font-medium text-black dark:text-white">
+            <p class="m-auto content-center grow-1 text-2xl font-medium text-black dark:text-white">
                 Start a new chat below
             </p>
         {:else}
-            {#each props.chat.history as msg}
-                {#if msg.role == "user"}
-                    <div class="lg:justify-items-end my-2">
-                        <Card class="p-3 dark:text-white flex-col! shadow-none" horizontal size="lg">
-                            {msg.content}
-                        </Card>
-                    </div>
-                {:else}
-                    <AssistantResponse content={msg.content}></AssistantResponse>
-                {/if}
-            {/each}
+            <div class="mx-auto xl:w-5xl lg:w-3xl w-auto">
+                {#each props.chat.history as msg}
+                    {#if msg.role == "user"}
+                        <div class="lg:justify-items-end my-10">
+                            <Card class="p-3 dark:text-white flex-col! shadow-none" horizontal size="lg">
+                                {msg.content}
+                            </Card>
+                        </div>
+                    {:else}
+                        <AssistantResponse content={msg.content}></AssistantResponse>
+                    {/if}
+                {/each}
+            </div>
         {/if}
     </div>
     <!-- Message input -->

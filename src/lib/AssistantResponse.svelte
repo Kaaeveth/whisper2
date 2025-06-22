@@ -1,101 +1,48 @@
-<script lang="ts" module>
-    import MarkdownIt from "markdown-it";
-
-    /** 
-     * NOTE: We currently render markdown with each new token
-     * returned by a model, which is quite inefficient.
-     * We should replace this with an incremental md parser in the future.
-     * For now, however, this solution is still relatively fast
-     * and not too resource heavy, especially for small responses.
-     * */
-    const md = MarkdownIt({linkify: true});
-</script>
-
 <script lang="ts">
-    import { Spinner } from "flowbite-svelte";
-    import { openUrl } from "@tauri-apps/plugin-opener";
+    import { Hr, Li, P, Spinner, TableBody, TableBodyRow, TableHead } from "flowbite-svelte";
+    import SvelteMarkdown from "@humanspeak/svelte-markdown";
+    import type { Renderers } from "@humanspeak/svelte-markdown";
+    import Heading from "./markdown-components/Heading.svelte";
+    import CodeBlock from "./markdown-components/CodeBlock.svelte";
+    import Anchor from "./markdown-components/Anchor.svelte";
+    import Blockquote from "./markdown-components/Blockquote.svelte";
+    import List from "./markdown-components/List.svelte";
+    import Code from "./markdown-components/Code.svelte";
+    import TableCell from "./markdown-components/TableCell.svelte";
+    import Table from "./markdown-components/Table.svelte";
 
     interface Props {
         content: string;
     }
     const props: Props = $props();
 
-    /**
-     * Handler for opening links in an external browser
-     * instead of the webview window.
-     * One would usually set the target attribute of the anchor element,
-     * however, we cannot configure markdown-it (without any additional plugins)
-     * to add attributes.
-     * @param node
-     */
-    function setupAnchorHandling(node: HTMLDivElement) {
-        node.addEventListener('click', async (e: MouseEvent) => {
-            if(!(e.target instanceof HTMLAnchorElement)) return;
-
-            e.preventDefault();
-            const elem = e.target as HTMLAnchorElement;
-            await openUrl(elem.href);
-        });
+    const renderers: Partial<Renderers> = {
+        link: Anchor,
+        heading: Heading,
+        paragraph: P,
+        hr: Hr,
+        code: CodeBlock,
+        image: Anchor,
+        blockquote: Blockquote,
+        list: List,
+        codespan: Code,
+        listitem: Li,
+        orderedlistitem: Li,
+        unorderedlistitem: Li,
+        table: Table,
+        tablebody: TableBody,
+        tablecell: TableCell,
+        tablehead: TableHead,
+        tablerow: TableBodyRow
     }
 </script>
 
-<style lang="postcss">
-@reference "tailwindcss";
-@reference "../app.css";
-
-md :global {
-    @apply dark:text-white;
-    @apply text-gray-900;
-
-    h1, h2, h3, h4, h5, h6 {
-        @apply font-bold;
-    }
-    h1 {
-        @apply text-5xl;
-    }
-    h2 {
-        @apply text-4xl;
-    }
-    h3 {
-        @apply text-3xl;
-    }
-    h4 {
-        @apply text-2xl;
-    }
-    h5 {
-        @apply text-xl;
-    }
-    h6 {
-        @apply text-lg;
-    }
-    p {
-        @apply leading-normal;
-        @apply text-left;
-        @apply whitespace-normal;
-        @apply text-base;
-        @apply tracking-normal;
-        @apply font-normal;
-    }
-    hr {
-        @apply bg-gray-100;
-        @apply mx-auto;
-        @apply w-9/10;
-        @apply my-4;
-        //@apply dark:bg-gray-700;
-    }
-    a {
-        @apply inline-flex;
-        @apply items-center;
-        @apply hover:underline;
-        @apply text-primary-600;
-        @apply dark:text-primary-500;
-    }
-}
-</style>
-
-<md class="contents" use:setupAnchorHandling>
+<md class="contents">
     {#if props.content.length > 0}
-        {@html md.render(props.content)}
+        <SvelteMarkdown
+          source={props.content}
+          renderers={renderers}>
+        </SvelteMarkdown>
     {:else}
         <div class="flex justify-center content-center flex-wrap h-24">
             <Spinner></Spinner>

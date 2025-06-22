@@ -5,7 +5,7 @@ Simple chat client for large language models.
 Only Ollama is currently supported.
 
 ### TODO
-- [ ] Styling of assistant responses
+- [x] Styling of assistant responses
 - [x] Persistence of chats
 - [ ] Custom Ollama Backend-Endpoint
 - [x] Cancelation of chat completions
