@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { Sidebar, SidebarItem, SidebarGroup, Button, Modal, Heading } from "flowbite-svelte";
+    import { Sidebar, SidebarItem, SidebarGroup, Button } from "flowbite-svelte";
     import { ToolsOutline, TrashBinOutline } from "flowbite-svelte-icons";
     import SidebarButton from "$lib/SidebarButton.svelte";
     import ToggableElement from "$lib/ToggableElement.svelte";
     import { goto } from "$app/navigation";
+    import ModalDialog, { type ShowModalOptions } from "./ModalDialog.svelte.ts";
 
     interface Props {
         chatTitles: string[];
@@ -24,25 +25,31 @@
     }
 
     // == Deleting chats ==
-    let confirmDeleteModalOpen = $state(false);
+    const modalOptions: ShowModalOptions = {
+        confirmText: "Delete",
+        confirmColor: "red",
+        abortText: "Abort",
+        title: "Delete Chat?",
+        content: deletePopup
+    }
     let deleteChatIdx = $state(-1); // Chat idx to be deleted
     let deletePromptChatTitle = $derived(props.chatTitles[deleteChatIdx]); // Title of chat to be deleted
 
-    function promptDeleteChat(idx: number) {
+    async function promptDeleteChat(idx: number) {
         if(idx < 0) return;
         deleteChatIdx = idx;
-        confirmDeleteModalOpen = true;
-    }
-
-    function deletePromptedChat() {
-        if(props.onDeleteChat) props.onDeleteChat(deleteChatIdx);
-        confirmDeleteModalOpen = false;
+        if(await ModalDialog.get().showModal(modalOptions) && props.onDeleteChat)
+            props.onDeleteChat(deleteChatIdx);
         deleteChatIdx = -1;
     }
 </script>
 
 <style>
 </style>
+
+{#snippet deletePopup()}
+    <p>The chat <i>{deletePromptChatTitle}</i> will be deleted forever.</p>
+{/snippet}
 
 {#if props.sidebar.open}
 <Sidebar backdrop={false} isOpen={props.sidebar.open} activateClickOutside={false} closeSidebar={() => props.sidebar.open = !props.sidebar.open}
@@ -85,17 +92,6 @@
         </SidebarGroup>
     </div>
 </Sidebar>
-
-<Modal bind:open={confirmDeleteModalOpen}>
-    <Heading tag="h3">Delete Chat?</Heading>
-    <p>The chat <i>{deletePromptChatTitle}</i> will be deleted forever.</p>
-
-    {#snippet footer()}
-        <Button color="red" onclick={() => deletePromptedChat()}>Delete</Button>
-        <Button color="alternative" onclick={() => confirmDeleteModalOpen = false}>Abort</Button>
-    {/snippet}
-</Modal>
-
 {:else}
 <div class="px-3 py-4">
     <SidebarButton sidebar={props.sidebar}></SidebarButton>

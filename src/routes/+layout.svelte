@@ -1,5 +1,6 @@
 <script lang="ts">
     import AppContext from '$lib/core/AppContext.svelte';
+    import ModalDialog from '$lib/ModalDialog.svelte';
 	import '../app.css';
 	
 	let { children } = $props();
@@ -19,4 +20,5 @@
 	{:catch e}
 		<p>Error initializing: {e}</p>
 	{/await}
+	<ModalDialog></ModalDialog>
 </main>
