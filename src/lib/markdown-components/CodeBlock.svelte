@@ -1,7 +1,6 @@
 <script lang="ts" module>
     import hljs from 'highlight.js';
     import 'highlight.js/styles/atom-one-light.css';
-    import DOMPurify from 'dompurify';
     import { ClipboardOutline } from 'flowbite-svelte-icons';
     import { Tooltip } from 'flowbite-svelte';
 </script>
@@ -25,7 +24,7 @@
         if(hasLang) {
             formatedContent = hljs.highlight(content, {language: lang, ignoreIllegals: true}).value;
         } else {
-            formatedContent = DOMPurify.sanitize(content);
+            formatedContent = content;
         }
     });
 
@@ -72,6 +71,6 @@
             </button>
             <Tooltip trigger="click">Copied</Tooltip>
         </div>
-        <code class="hljs" bind:this={codeElement}>{@html formatedContent}</code>
+        <code class="hljs" bind:this={codeElement}>{#if hasLang}{@html formatedContent}{:else}{formatedContent}{/if}</code>
     </div>
 </pre>
