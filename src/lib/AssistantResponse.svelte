@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Hr, Li, P, Spinner, TableBody, TableBodyRow, TableHead } from "flowbite-svelte";
+    import { Hr, Li, Spinner, TableBody, TableBodyRow, TableHead } from "flowbite-svelte";
     import SvelteMarkdown from "@humanspeak/svelte-markdown";
     import type { Renderers } from "@humanspeak/svelte-markdown";
     import Heading from "./markdown-components/Heading.svelte";
@@ -10,6 +10,7 @@
     import Code from "./markdown-components/Code.svelte";
     import TableCell from "./markdown-components/TableCell.svelte";
     import Table from "./markdown-components/Table.svelte";
+    import Paragraph from "./markdown-components/Paragraph.svelte";
 
     interface Props {
         content: string;
@@ -19,7 +20,7 @@
     const renderers: Partial<Renderers> = {
         link: Anchor,
         heading: Heading,
-        paragraph: P,
+        paragraph: Paragraph,
         hr: Hr,
         code: CodeBlock,
         image: Anchor,

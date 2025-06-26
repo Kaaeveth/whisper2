@@ -12,7 +12,7 @@
         children?: Snippet
     }
 
-    const { depth, raw, text, options, slug, children }: Props = $props()
+    const { depth, raw, text, options, slug, children }: Props = $props();
 
     const id = $derived(options.headerIds ? options.headerPrefix + slug(text) : undefined)
 </script>
@@ -21,7 +21,7 @@
     <Heading 
         id={id}
         class="my-4"
-        tag={("h"+depth) as "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | undefined}
+        tag={("h"+Math.max(2, depth)) as "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | undefined}
     >
         {@render children?.()}
     </Heading>
