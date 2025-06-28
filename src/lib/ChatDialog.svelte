@@ -8,6 +8,7 @@
     interface Props {
         chat?: Chat;
         model?: Model;
+        autoScroll?: boolean;
         createChat: () => Chat;
     }
 
@@ -44,8 +45,6 @@
         // TODO: handle errors & abort
         try {
             generating = true;
-            scrollToLastChatMsg();
-
             const userPrompt: ChatMessage = {
                 content: inputChatMsg,
                 role: "user"
@@ -64,6 +63,7 @@
             });
             props.chat!.history.push(userPrompt, answer);
             inputChatMsg = "";
+            scrollToLastChatMsg();
 
             // Assemble the completion
             // Since the content is reactive, the UI gets
@@ -73,7 +73,8 @@
             try {
                 for await(const res of promptResponse) {
                     answer.content += res.message.content;
-                    scrollToLastChatMsg();
+                    if(props.autoScroll)
+                        scrollToLastChatMsg();
                 }
             } finally {
                 // Generate title for the chat on first prompt

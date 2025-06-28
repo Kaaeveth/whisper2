@@ -12,6 +12,7 @@
 
     const ctx = AppContext.getInstance();
     const sidebar = new ToggableElement(true);
+    let autoScroll = $derived(ctx.settings.get<boolean>(Settings.AUTO_SCROLL));
     
     // State about all chats and the current selected one.
     // Every child component uses theses states.
@@ -67,9 +68,10 @@
             <StatusDisplay></StatusDisplay>
             <OllamaStatus></OllamaStatus>
         </div>
-        <ChatDialog 
+        <ChatDialog
            chat={selectedChat}
            model={selectedModel}
+           autoScroll={autoScroll}
            createChat={newChat}>
        </ChatDialog>
     </div>

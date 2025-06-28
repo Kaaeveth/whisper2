@@ -2,6 +2,7 @@ import OllamaBackend from "./backends/Ollama.svelte";
 import type { Chat, ChatMessage } from "./Chat";
 import type { Model } from "./LLMBackend";
 import { load, type Store } from '@tauri-apps/plugin-store';
+import Settings from "./Settings.svelte";
 
 export default class AppContext {
     private static instance?: AppContext;
@@ -15,6 +16,7 @@ export default class AppContext {
 
     constructor() {
         this.ollamaBackend = new OllamaBackend();
+        this._settings = new Settings();
     }
 
     private isInit: boolean = false;
@@ -25,6 +27,7 @@ export default class AppContext {
     // Store for saving and loading chats from disk
     // Initialized at startup
     private _chatStore!: Store;
+    private _settings: Settings;
 
     private _chats: Chat[] = $state([]);
 
@@ -36,8 +39,12 @@ export default class AppContext {
         return this._models;
     }
 
-    get chats() : Chat[] {
+    get chats(): Chat[] {
         return this._chats;
+    }
+
+    get settings(): Settings {
+        return this._settings;
     }
 
     /**
@@ -48,16 +55,12 @@ export default class AppContext {
         if(this.isInit) return;
 
         try {
+            await this._settings.init();
             this._chatStore = await load("chats.json");
-            await this.loadChats();
-
-            // Check if Ollama is running
-            if(await this.ollamaBackend.running()) {
-                await this.updateModels();
-            } else {
-                this.statusMsg = "Ollama is not running";
-                this.status = "warn";
-            }
+            await Promise.all([
+                this.loadChats(),
+                this.updateModels()
+            ]);
 
             this.isInit = true;
         } catch(e) {
