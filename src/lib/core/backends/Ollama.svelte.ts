@@ -61,7 +61,7 @@ export default class OllamaBackend implements Backend {
                 headers: {
                     origin: ""
                 },
-                signal: AbortSignal.timeout(5000)
+                signal: AbortSignal.timeout(2000)
             });
             return res.status < 500 && res.status != 403;
         } catch {

@@ -62,18 +62,14 @@ export default class AppContext {
             this.isInit = true;
         } catch(e) {
             console.error("Error initializing: "+e);
-            this._status.status = "error";
-            this.statusMsg = String(e);
+            this.status = {msg: String(e), status: "error"};
             throw e;
         }
     }
 
-    set statusMsg(msg: string) {
-        this._status.msg = msg;
-    }
-
-    set status(status: AppStatus["status"]) {
-        this._status.status = status;
+    set status(status: AppStatus) {
+        this._status.status = status?.status ?? "ok";
+        this._status.msg = status?.msg ?? "";
     }
 
     get status(): AppStatus {
@@ -139,7 +135,10 @@ export default class AppContext {
      * @returns Available Models of all backends
      */
     async updateModels(): Promise<Model[]> {
-        return this._models = await this.ollamaBackend.updateModels();
+        if(await this.ollamaBackend.running()) {
+            this._models = await this.ollamaBackend.updateModels();
+        }
+        return this._models;
     }
 
     newChat(): Chat {

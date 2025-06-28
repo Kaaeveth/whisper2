@@ -7,6 +7,8 @@
     import ModelSelection from "$lib/ModelSelection.svelte";
     import type { Snapshot } from "./$types";
     import StatusDisplay from "$lib/StatusDisplay.svelte";
+    import OllamaStatus from "$lib/OllamaStatus.svelte";
+    import Settings from "$lib/core/Settings.svelte";
 
     const ctx = AppContext.getInstance();
     const sidebar = new ToggableElement(true);
@@ -63,6 +65,7 @@
         <div class="flex min-w-xs gap-5">
             <ModelSelection models={ctx.models} bind:selectedModel></ModelSelection>
             <StatusDisplay></StatusDisplay>
+            <OllamaStatus></OllamaStatus>
         </div>
         <ChatDialog 
            chat={selectedChat}
