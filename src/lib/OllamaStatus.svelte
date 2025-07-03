@@ -8,13 +8,18 @@
     let ollamaStarting = $state(false);
     const ctx = AppContext.getInstance();
 
+    async function checkOllamaHealth() {
+        ollamaRunning = await ctx.ollama.running();
+        if(ollamaRunning && ollamaStarting) {
+            ollamaStarting = false;
+            await ctx.updateModels();
+        }
+    }
+
     onMount(() => {
+        checkOllamaHealth();
         const updateHndl = setInterval(async () => {
-            ollamaRunning = await ctx.ollama.running();
-            if(ollamaRunning && ollamaStarting) {
-                ollamaStarting = false;
-                await ctx.updateModels();
-            }
+            await checkOllamaHealth();
         }, 5000);
 
         return () => {
