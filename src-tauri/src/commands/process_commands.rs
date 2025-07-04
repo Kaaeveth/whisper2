@@ -9,7 +9,7 @@ use crate::errors;
 pub struct CommandOutput(Output);
 
 #[tauri::command]
-pub async fn execute(cmd: &str, args: Vec<String>) -> Result<CommandOutput, errors::Error> {
+pub async fn execute(cmd: &str, args: Vec<&str>) -> Result<CommandOutput, errors::Error> {
     let res = Command::new(cmd).args(args).output()?;
     Ok(CommandOutput(res))
 }
