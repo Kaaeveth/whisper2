@@ -3,31 +3,31 @@ use core::str;
 use bytes::Bytes;
 use tokio::sync::mpsc::{Sender, Receiver, channel};
 
-use crate::backend::{chat::ChatResponse, llm::{PromptEvent, PromptResponse}};
+use crate::backend::llm::{PromptEvent, PromptResponse};
 
-pub enum PromptData {
+pub(crate) enum OllamaPromptData {
     Data(Bytes),
     End
 }
 
-pub struct PromptReader {
-    tx_data: Option<Sender<PromptData>>,
+pub(crate) struct OllamaPromptReader {
+    tx_data: Option<Sender<OllamaPromptData>>,
     tx_events: Option<Sender<PromptEvent>>,
     rx_events: Receiver<PromptEvent>
 }
 
-impl PromptReader {
+impl OllamaPromptReader {
     pub fn new() -> Self {
         let (tx, mut rx) = channel(1024);
         let (tx_ev, rx_ev) = channel(256);
-        let obj = PromptReader {
+        let obj = OllamaPromptReader {
             tx_data: Some(tx),
             tx_events: Some(tx_ev.clone()),
             rx_events: rx_ev
         };
 
         tokio::spawn(async move {
-            let mut buffer: Vec<PromptData> = Vec::new();
+            let mut buffer: Vec<OllamaPromptData> = Vec::with_capacity(1024);
             let mut json_buffer = String::new();
 
             'outer: loop {
@@ -37,27 +37,46 @@ impl PromptReader {
 
                 // Buffer data until we have a complete JSON object
                 // We send the object right after parsing it and clear the JSON buffer
-                let _ = rx.recv_many(&mut buffer, 512).await;
+                let _ = rx.recv_many(&mut buffer, 1024).await;
                 for data in &buffer {
                     match data {
-                        PromptData::End => break 'outer,
-                        PromptData::Data(data) => {
+                        OllamaPromptData::End => break 'outer,
+                        OllamaPromptData::Data(data) => {
+                            // Buffer the data as string
+                            match str::from_utf8(&data) {
+                                Ok(str) => json_buffer.push_str(str),
+                                Err(e) => {
+                                    eprintln!("Unexpected Ollama string encoding: {:?}", e);
+                                    let _ = tx_ev.send(PromptEvent::Stop).await;
+                                    break 'outer;
+                                }
+                            };
+
                             // Search for newline
-                            let delimiter_idx = data.iter().position(|b| *b == b'\n');
-                            if let Some(delimiter_idx) = delimiter_idx {
-                                let slice = data.slice(0..delimiter_idx);
-                                json_buffer.push_str(str::from_utf8(&slice).unwrap());
+                            let delimiter_idx = json_buffer.chars().into_iter().position(|b| b == '\n');
+                            let Some(delimiter_idx) = delimiter_idx else {
+                                continue;
+                            };
 
-                                // We have a full JSON object
-                                let value: ChatResponse = serde_json::from_str(&json_buffer).unwrap();
-                                let _ = tx_ev.send(PromptEvent::Message(value)).await;
+                            // We have a full JSON object
+                            let json_slice = &json_buffer[0..delimiter_idx];
+                            match serde_json::from_str(&json_slice) {
+                                Ok(value) => {
+                                    let _ = tx_ev.send(PromptEvent::Message(value)).await;
+                                },
+                                Err(e) => {
+                                    eprintln!("Invalid JSON received from Ollama chat completion: {:?}", e);
+                                    let _ = tx_ev.send(PromptEvent::Stop).await;
+                                    break 'outer;
+                                }
+                            }
 
-                                // Append the remaining data
-                                json_buffer.clear();
-                                let slice = data.slice(delimiter_idx..);
-                                json_buffer.push_str(str::from_utf8(&slice).unwrap());
+                            // Keep the remaining data without the newline
+                            if delimiter_idx < json_buffer.len()-1 {
+                                let slice = json_buffer[delimiter_idx+1..].to_owned();
+                                json_buffer = slice;
                             } else {
-                                json_buffer.push_str(str::from_utf8(&data).unwrap());
+                                json_buffer.clear();
                             }
                         }
                     }
@@ -70,12 +89,12 @@ impl PromptReader {
         return obj;
     }
 
-    pub fn data_intake(&self) -> Sender<PromptData> {
+    pub fn data_intake(&self) -> Sender<OllamaPromptData> {
         self.tx_data.as_ref().unwrap().clone()
     }
 }
 
-impl PromptResponse for PromptReader {
+impl PromptResponse for OllamaPromptReader {
     fn get_prompts(&self) -> &Receiver<PromptEvent> {
         &self.rx_events
     }

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
 use url::Url;
-use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{PromptData, PromptReader}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
+use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{OllamaPromptData, OllamaPromptReader}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
 
 pub struct OllamaBackendInner {
     http_client: Client,
@@ -258,18 +258,18 @@ impl Model for OllamaModel {
             ).await?;
         }
 
-        let reader = PromptReader::new();
+        let reader = OllamaPromptReader::new();
         let sink = reader.data_intake();
 
         tokio::spawn(async move {
             if let Ok(stream) = res.chunk().await {
                 while let Some(ref chunk) = stream {
-                    if let Err(_) = sink.send(PromptData::Data(chunk.clone())).await {
+                    if let Err(_) = sink.send(OllamaPromptData::Data(chunk.clone())).await {
                         break;
                     }
                 }
             }
-            let _ = sink.send(PromptData::End).await;
+            let _ = sink.send(OllamaPromptData::End).await;
         });
         
         Ok(Box::new(reader))
