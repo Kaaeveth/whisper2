@@ -1,19 +1,18 @@
-use std::{ops::Deref, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use std::{ops::Deref, sync::{atomic::AtomicBool, Arc, RwLock}, time::{Duration, SystemTime}};
+use tokio::sync::{Mutex, OnceCell};
 
 use async_trait::async_trait;
 use serde::Deserialize;
-use tauri::ipc::Channel;
-use reqwest::{Client, IntoUrl, Method, RequestBuilder};
+use tauri::ipc::{Channel, InvokeResponseBody};
+use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
 use url::Url;
-use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, PromptEvent, SharedBackend, SharedBackendImpl, SharedModel}}, commands::process_commands::{execute, terminate}, errors};
-
+use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, PromptEvent, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
 
 pub struct OllamaBackendInner {
     http_client: Client,
     api_url: Url,
     models: Vec<SharedModel>,
-    create_clone: Box<dyn Fn() -> Option<SharedBackend> + Send + Sync>
+    self_ref: OnceCell<WeakBackend>
 }
 
 #[derive(Clone)]
@@ -26,15 +25,17 @@ impl OllamaBackend {
                 http_client: Client::new(),
                 api_url: Url::parse("http://localhost:11434/api").unwrap(),
                 models: Vec::new(),
-                create_clone: Box::new(|| None)
+                self_ref: OnceCell::new()
             }
         );
 
         let shared_backend = Arc::new(Mutex::new(backend));
-        let b2 = shared_backend.clone();
-        shared_backend.blocking_lock().set_clone_fn(Box::new(move || {
-            Some(b2.clone())
-        }));
+        {
+            let weak_backend = Arc::downgrade(&shared_backend);
+            let guard = shared_backend.blocking_lock();
+            let ollama = guard.as_any().downcast_ref::<OllamaBackendInner>().unwrap();
+            let _ = ollama.self_ref.set(weak_backend); // Cannot fail
+        }
 
         return shared_backend;
     }
@@ -44,13 +45,13 @@ impl OllamaBackendInner {
     async fn call_backend(
         &self,
         url: impl IntoUrl,
-        method: Option<Method>,
+        method: Method,
         req_builder: impl FnOnce(RequestBuilder) -> RequestBuilder + 'static
     ) -> reqwest::Result<reqwest::Response>
     {
         let url = self.api_url.join(url.into_url()?.as_str()).unwrap();
         let mut builder = self.http_client.request(
-            method.unwrap_or(Method::GET),
+            method,
             url
         );
         builder = req_builder(builder);
@@ -60,7 +61,7 @@ impl OllamaBackendInner {
 
     async fn call_backend_default<>(&self, url: impl IntoUrl) -> reqwest::Result<reqwest::Response>
     {
-        self.call_backend(url, None, |r| {r}).await
+        self.call_backend(url, Method::GET, |r| {r}).await
     }
 }
 
@@ -90,8 +91,8 @@ impl Backend for OllamaBackendInner {
         "Ollama"
     }
 
-    fn set_clone_fn(&mut self, clone: Box<dyn Fn() -> Option<SharedBackend> + Send + Sync>) {
-        self.create_clone = clone;
+    fn models(&self) -> &[SharedModel] {
+        &self.models
     }
 
     async fn update_models(&mut self) -> Result<(), errors::Error> {
@@ -103,7 +104,7 @@ impl Backend for OllamaBackendInner {
             let model_name = m.name.clone();
             let detail_res: ModelDetail = self.call_backend(
                 "/show",
-                Some(Method::POST),
+                Method::POST,
                 move |req| {
                     req.json(&serde_json::json!({"model": model_name}))
                 }
@@ -115,7 +116,8 @@ impl Backend for OllamaBackendInner {
                     id: m.id,
                     size: m.size,
                     capabilities: detail_res.capabilities,
-                    backend: (self.create_clone)().unwrap()
+                    backend: self.self_ref.get().ok_or(Error::Unknown)?.upgrade().ok_or(Error::Unknown)?,
+                    runtime_info: RwLock::new(None)
                 }
             ))));
         }
@@ -124,10 +126,16 @@ impl Backend for OllamaBackendInner {
         Ok(())
     }
 
+    async fn get_running_models(&self) -> Result<Vec<RuntimeInfo>, errors::Error> {
+        let res = self.call_backend_default("/ps").await?;
+        let models: Vec<RuntimeInfo> = res.json().await?;
+        Ok(models)
+    }
+
     async fn running(&self) -> bool {
         let res = self.call_backend(
             "",
-            Some(Method::HEAD),
+            Method::HEAD,
             |req| {
                 req.header("Cachec", "no-store")
                    .timeout(Duration::from_secs(2))
@@ -154,7 +162,8 @@ pub struct OllamaModel {
     id: String,
     size: i32,
     capabilities: Vec<Capability>,
-    backend: SharedBackend
+    backend: SharedBackend,
+    runtime_info: RwLock<Option<RuntimeInfo>>
 }
 
 #[async_trait]
@@ -176,25 +185,105 @@ impl Model for OllamaModel {
     }
 
     async fn loaded(&self) -> bool {
-        todo!();
+        self.runtime_info.read().unwrap().is_some()
     }
+
     async fn get_loaded_size(&self) -> i32 {
-        todo!();
+        self.runtime_info.read().unwrap().as_ref()
+            .and_then(|info| Some(info.size_vram))
+            .unwrap_or(-1)
+    }
+
+    async fn get_runtime_info(&self) -> Result<Option<RuntimeInfo>, errors::Error> {
+        let current_time = SystemTime::now();
+
+        if let Some(rt) = &*self.runtime_info.read().unwrap() {
+            if rt.expires_at > current_time {
+                return Ok(Some(rt.clone()));
+            }
+        }
+
+        let backend = self.backend.lock().await;
+        let mut runtime_infos: Vec<RuntimeInfo> = backend.get_running_models().await?;
+        let mut runtime_info = self.runtime_info.write().unwrap();
+
+        let runtime_info_idx = runtime_infos.iter().position(|r| r.model_name == self.name);
+        if let Some(runtime_info_idx) = runtime_info_idx {
+            let rt = runtime_infos.swap_remove(runtime_info_idx);
+            *runtime_info = Some(rt.clone());
+            Ok(Some(rt.clone()))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn load(&mut self) {
-        todo!();
-    }
-    async fn unload(&mut self) {
-        todo!();
+        // Ollama models cannot be loaded manually 
     }
 
-    fn prompt(
+    async fn unload(&mut self) {
+        // Ollama models cannot be unloaded manually
+    }
+
+    async fn prompt(
         &self,
         content: &ChatMessage,
         history: &[ChatMessage],
         think: Option<bool>
-    ) -> Channel<PromptEvent> {
-        todo!();
+    ) -> Result<Channel<PromptEvent>, Error>
+    {
+        let mut res: Response;
+        {
+            let model_name = self.id.clone();
+            let mut messages: Vec<ChatMessage> = Vec::with_capacity(history.len()+1);
+            history.iter().for_each(|msg| messages.push(msg.clone()));
+            messages.push(content.clone());
+
+            let backend = self.backend.blocking_lock();
+            let ollama = backend
+                .as_any()
+                .downcast_ref::<OllamaBackendInner>()
+                .ok_or(Error::Internal("Could not get Ollama backend".into()))?;
+
+            res = ollama.call_backend(
+                "/chat",
+                Method::POST,
+                move |req| {
+                    req.json(&serde_json::json!({
+                        "model": model_name,
+                        "keep_alive": "10m",
+                        "think": think.unwrap_or(false),
+                        "messages": messages
+                    }))
+                }
+            ).await?;
+        }
+
+        let abort = Arc::new(AtomicBool::new(false));
+        let send_abort = abort.clone();
+        let on_message = move |event: InvokeResponseBody| {
+            let msg = event.deserialize::<PromptEvent>()?;
+            if let PromptEvent::Stop = msg {
+                send_abort.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            Ok(())
+        };
+
+        let channel: Channel<PromptEvent> = Channel::new(on_message);
+        let producer_channel = channel.clone();
+
+        tokio::spawn(async move {
+            while let Some(chunk) = res.chunk().await.unwrap() {
+                if abort.load(std::sync::atomic::Ordering::Relaxed) {
+                    let _ = producer_channel.send(PromptEvent::Stop);
+                    break;
+                }
+
+
+            }
+            let _ = producer_channel.send(PromptEvent::Stop);
+        });
+        
+        Ok(channel)
     }
 }

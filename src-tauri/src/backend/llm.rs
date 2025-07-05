@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::any::Any;
+use std::sync::{Arc, Weak};
+use std::time::SystemTime;
 use tokio::sync::Mutex;
 use std::boxed::Box;
 use tauri::ipc::Channel;
@@ -6,24 +8,36 @@ use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 
 use crate::backend::chat::{ChatMessage, ChatResponse};
-use crate::errors;
+use crate::errors::Error;
 
+// NOTE: Replace Mutex with RwLock?
 pub type SharedModel = Arc<Mutex<Box<dyn Model>>>;
 pub type SharedBackend = Arc<Mutex<Box<dyn Backend>>>;
+pub type WeakBackend = Weak<Mutex<Box<dyn Backend>>>;
 
 pub type SharedBackendImpl<T> = Arc<Mutex<Box<T>>>;
 
 #[async_trait]
-pub trait Backend: Send + Sync {
+pub trait Backend: Send + Sync + Any {
     fn name(&self) -> &str;
+    fn models(&self) -> &[SharedModel];
 
-    async fn update_models(&mut self) -> Result<(), errors::Error>;
+    async fn update_models(&mut self) -> Result<(), Error>;
+    async fn get_running_models(&self) -> Result<Vec<RuntimeInfo>, Error>;
     async fn running(&self) -> bool;
 
-    async fn boot(&self) -> Result<(), errors::Error>;
-    async fn shutdown(&self) -> Result<(), errors::Error>;
+    async fn boot(&self) -> Result<(), Error>;
+    async fn shutdown(&self) -> Result<(), Error>;
+}
 
-    fn set_clone_fn(&mut self, clone: Box<dyn Fn() -> Option<SharedBackend> + Send + Sync>);
+impl dyn Backend {
+    pub fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    pub fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -33,10 +47,17 @@ pub enum Capability {
     Tools
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub enum PromptEvent {
     Message(ChatResponse),
-    Abort
+    Stop
+}
+
+#[derive(Clone, Deserialize)]
+pub struct RuntimeInfo {
+    pub size_vram: i32,
+    pub expires_at: SystemTime,
+    pub model_name: String
 }
 
 #[async_trait]
@@ -49,14 +70,15 @@ pub trait Model: Send + Sync {
 
     async fn loaded(&self) -> bool;
     async fn get_loaded_size(&self) -> i32;
+    async fn get_runtime_info(&self) -> Result<Option<RuntimeInfo>, Error>;
 
     async fn load(&mut self);
     async fn unload(&mut self);
 
-    fn prompt(
+    async fn prompt(
         &self,
         content: &ChatMessage,
         history: &[ChatMessage],
         think: Option<bool>
-    ) -> Channel<PromptEvent>;
+    ) -> Result<Channel<PromptEvent>, Error>;
 }

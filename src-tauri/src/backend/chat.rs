@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use uuid::Uuid;
 use time::Date;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Deserialize)]
 pub enum Role {
     System,
     User,
@@ -10,15 +12,21 @@ pub enum Role {
     Tool
 }
 
-#[derive(Serialize)]
-pub struct ChatMessage {
+#[derive(Serialize, Clone, Deserialize)]
+pub struct ChatMessageInner {
     role: Role,
     content: String,
     images: Option<Vec<String>>,
     thoughts: Option<String>
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone, Deserialize)]
+pub struct ChatMessage {
+    #[serde(flatten)]
+    inner: Arc<ChatMessageInner>   
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ChatResponse {
     done: bool,
     message: ChatMessage

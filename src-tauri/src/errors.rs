@@ -5,7 +5,11 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
     #[error("HTTP error")]
-    Http(#[from] reqwest::Error)
+    Http(#[from] reqwest::Error),
+    #[error("Internal error - There is a bug: {0}")]
+    Internal(String),
+    #[error("Internal error")]
+    Unknown
 }
 
 #[derive(serde::Serialize)]
@@ -13,7 +17,8 @@ pub enum Error {
 #[serde(rename_all = "camelCase")]
 pub enum ErrorKind {
     Io(String),
-    Http{status_code: u16, status_msg: String}
+    Http{status_code: u16, status_msg: String},
+    Internal(String)
 }
 
 impl serde::Serialize for Error {
@@ -31,6 +36,12 @@ impl serde::Serialize for Error {
                     status_code: e.status().unwrap_or(StatusCode::OK).as_u16(),
                     status_msg: e.to_string()
                 }
+            },
+            Self::Internal(msg) => {
+                ErrorKind::Internal(msg.to_owned())
+            },
+            Self::Unknown => {
+                ErrorKind::Internal(self.to_string())
             }
         };
         error_kind.serialize(serializer)
