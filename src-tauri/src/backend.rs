@@ -4,6 +4,7 @@ use std::collections::HashMap;
 pub(crate) mod llm;
 pub(crate) mod chat;
 pub(crate) mod ollama;
+pub(crate) mod reader;
 
 use crate::backend::ollama::OllamaBackend;
 use crate::backend::llm::SharedBackend;

@@ -2,8 +2,8 @@ use std::any::Any;
 use std::sync::{Arc, Weak};
 use std::time::SystemTime;
 use tokio::sync::Mutex;
+use tokio::sync::mpsc::{Sender, Receiver};
 use std::boxed::Box;
-use tauri::ipc::Channel;
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 
@@ -34,10 +34,6 @@ impl dyn Backend {
     pub fn as_any(&self) -> &dyn Any {
         self
     }
-
-    pub fn into_any(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -60,6 +56,11 @@ pub struct RuntimeInfo {
     pub model_name: String
 }
 
+pub trait PromptResponse {
+    fn get_prompts(&self) -> &Receiver<PromptEvent>;
+    fn get_control(&mut self) -> Sender<PromptEvent>;
+}
+
 #[async_trait]
 pub trait Model: Send + Sync {
     fn name(&self) -> &str;
@@ -80,5 +81,5 @@ pub trait Model: Send + Sync {
         content: &ChatMessage,
         history: &[ChatMessage],
         think: Option<bool>
-    ) -> Result<Channel<PromptEvent>, Error>;
+    ) -> Result<Box<dyn PromptResponse>, Error>;
 }

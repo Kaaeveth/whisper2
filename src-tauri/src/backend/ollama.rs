@@ -1,12 +1,11 @@
-use std::{ops::Deref, sync::{atomic::AtomicBool, Arc, RwLock}, time::{Duration, SystemTime}};
+use std::{ops::Deref, sync::{Arc, RwLock}, time::{Duration, SystemTime}};
 use tokio::sync::{Mutex, OnceCell};
 
 use async_trait::async_trait;
 use serde::Deserialize;
-use tauri::ipc::{Channel, InvokeResponseBody};
 use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
 use url::Url;
-use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, PromptEvent, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
+use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{PromptData, PromptReader}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
 
 pub struct OllamaBackendInner {
     http_client: Client,
@@ -230,7 +229,7 @@ impl Model for OllamaModel {
         content: &ChatMessage,
         history: &[ChatMessage],
         think: Option<bool>
-    ) -> Result<Channel<PromptEvent>, Error>
+    ) -> Result<Box<dyn PromptResponse>, Error>
     {
         let mut res: Response;
         {
@@ -259,31 +258,20 @@ impl Model for OllamaModel {
             ).await?;
         }
 
-        let abort = Arc::new(AtomicBool::new(false));
-        let send_abort = abort.clone();
-        let on_message = move |event: InvokeResponseBody| {
-            let msg = event.deserialize::<PromptEvent>()?;
-            if let PromptEvent::Stop = msg {
-                send_abort.store(true, std::sync::atomic::Ordering::Relaxed);
-            }
-            Ok(())
-        };
-
-        let channel: Channel<PromptEvent> = Channel::new(on_message);
-        let producer_channel = channel.clone();
+        let reader = PromptReader::new();
+        let sink = reader.data_intake();
 
         tokio::spawn(async move {
-            while let Some(chunk) = res.chunk().await.unwrap() {
-                if abort.load(std::sync::atomic::Ordering::Relaxed) {
-                    let _ = producer_channel.send(PromptEvent::Stop);
-                    break;
+            if let Ok(stream) = res.chunk().await {
+                while let Some(ref chunk) = stream {
+                    if let Err(_) = sink.send(PromptData::Data(chunk.clone())).await {
+                        break;
+                    }
                 }
-
-
             }
-            let _ = producer_channel.send(PromptEvent::Stop);
+            let _ = sink.send(PromptData::End).await;
         });
         
-        Ok(channel)
+        Ok(Box::new(reader))
     }
 }

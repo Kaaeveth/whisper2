@@ -5034,6 +5034,7 @@ name = "whisper2"
 version = "0.8.0"
 dependencies = [
  "async-trait",
+ "bytes",
  "reqwest",
  "serde",
  "serde_json",
