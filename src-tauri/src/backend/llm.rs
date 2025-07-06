@@ -2,7 +2,7 @@ use std::any::Any;
 use std::sync::{Arc, Weak};
 use std::time::SystemTime;
 use tokio::sync::RwLock;
-use tokio::sync::mpsc::{Sender, Receiver};
+use tokio::sync::mpsc::Receiver;
 use std::boxed::Box;
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
@@ -64,9 +64,9 @@ pub struct RuntimeInfo {
     pub model_name: String
 }
 
-pub trait PromptResponse: Send {
+pub trait PromptResponse: Send + Sync {
     fn get_prompts(&mut self) -> Receiver<PromptEvent>;
-    fn get_control(&self) -> Sender<PromptEvent>;
+    fn abort(&self);
 }
 
 #[derive(Serialize, Deserialize, Clone)]

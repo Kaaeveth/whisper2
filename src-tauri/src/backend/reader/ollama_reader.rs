@@ -1,4 +1,5 @@
 use core::str;
+use std::sync::{atomic::AtomicBool, Arc};
 
 use bytes::Bytes;
 use tokio::sync::mpsc::{Sender, Receiver, channel};
@@ -12,8 +13,8 @@ pub(crate) enum OllamaPromptData {
 
 pub(crate) struct OllamaPromptReader {
     tx_data: Option<Sender<OllamaPromptData>>,
-    tx_events: Sender<PromptEvent>,
-    rx_events: Option<Receiver<PromptEvent>>
+    rx_events: Option<Receiver<PromptEvent>>,
+    abort: Arc<AtomicBool>
 }
 
 impl OllamaPromptReader {
@@ -22,16 +23,17 @@ impl OllamaPromptReader {
         let (tx_ev, rx_ev) = channel(256);
         let obj = OllamaPromptReader {
             tx_data: Some(tx),
-            tx_events: tx_ev.clone(),
-            rx_events: Some(rx_ev)
+            rx_events: Some(rx_ev),
+            abort: Arc::new(AtomicBool::new(false))
         };
 
+        let abort = obj.abort.clone();
         tokio::spawn(async move {
             let mut buffer: Vec<OllamaPromptData> = Vec::with_capacity(1024);
             let mut json_buffer = String::new();
 
             'outer: loop {
-                if rx.is_closed() {
+                if rx.is_closed() || abort.load(std::sync::atomic::Ordering::Relaxed) {
                     break;
                 }
 
@@ -99,7 +101,7 @@ impl PromptResponse for OllamaPromptReader {
         self.rx_events.take().unwrap()
     }
 
-    fn get_control(&self) -> Sender<PromptEvent> {
-        self.tx_events.clone()
+    fn abort(&self) {
+        self.abort.store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }

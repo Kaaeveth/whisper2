@@ -1,6 +1,7 @@
-use tauri::{ipc::Channel, State};
+use std::sync::Arc;
+use tauri::{ipc::Channel, Manager, Resource, ResourceId, State};
 
-use crate::{backend::{chat::ChatMessage, llm::{ModelInfo, PromptEvent, RuntimeInfo, SharedBackend, SharedModel}, BackendStore}, errors::Error};
+use crate::{backend::{chat::ChatMessage, llm::{ModelInfo, PromptEvent, PromptResponse, RuntimeInfo, SharedBackend, SharedModel}, BackendStore}, errors::Error};
 
 fn get_backend(backend_name: &str, store: &BackendStore)
 -> Result<SharedBackend, Error>
@@ -135,26 +136,23 @@ pub async fn unload_model(backend_name: &str, model_name: &str, store: State<'_,
 pub async fn prompt_model(
     backend_name: &str, model_name: &str, store: State<'_, BackendStore>,
     content: ChatMessage, history: Vec<ChatMessage>, think: bool,
-    response_channel: Channel<PromptEvent>
-) -> Result<Channel<PromptEvent>, Error>
+    response_channel: Channel<PromptEvent>,
+    app_handle: tauri::AppHandle
+) -> Result<ResourceId, Error>
 {
     let model_ = get_model(backend_name, model_name, &store).await?;
     let model = model_.read().await;
 
     let mut res = model.prompt(&content, &history, Some(think)).await?;
     drop(model); // Dont need to lock the model anymore
-    let ctrl = res.get_control();
+    let mut prompts = res.get_prompts();
+    let rid = app_handle.resources_table().add_arc(Arc::new(PromptResponseResource(res)));
 
     tokio::spawn(async move {
-        let mut prompts = res.get_prompts();
         loop {
             if let Some(prompt) = prompts.recv().await {
                 let stop = prompt.is_stop();
-                if let Err(_) = response_channel.send(prompt) {
-                    break;
-                }
-                if stop {
-                    let _ = response_channel.send(PromptEvent::Stop);
+                if response_channel.send(prompt).is_err() || stop {
                     break;
                 }
             } else {
@@ -162,11 +160,27 @@ pub async fn prompt_model(
                 break;
             }
         }
+        prompts.close();
     });
+    Ok(rid)
+}
 
-    let control_channel: Channel<PromptEvent> = Channel::new(move |_| {
-        let _ = ctrl.send(PromptEvent::Stop);
-        Ok(())
-    });
-    Ok(control_channel)
+#[tauri::command]
+pub async fn stop_prompt(rid: ResourceId, app_handle: tauri::AppHandle)
+{
+    if let Ok(r) = app_handle.resources_table().take::<PromptResponseResource>(rid) {
+        r.0.abort();
+    }
+}
+
+struct PromptResponseResource(Box<dyn PromptResponse>);
+impl Resource for PromptResponseResource {
+    fn name(&self) -> std::borrow::Cow<'_, str> {
+        "PromptResponseResource".into()
+    }
+
+    fn close(self: Arc<Self>) {
+        // Backup stoping of prompt generation
+        self.0.abort();
+    }
 }

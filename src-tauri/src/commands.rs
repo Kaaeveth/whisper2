@@ -18,7 +18,8 @@ macro_rules! init {
             crate::commands::backend_commands::get_model_runtime_info,
             crate::commands::backend_commands::load_model,
             crate::commands::backend_commands::unload_model,
-            crate::commands::backend_commands::prompt_model
+            crate::commands::backend_commands::prompt_model,
+            crate::commands::backend_commands::stop_prompt
         ]
     };
 }
