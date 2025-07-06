@@ -12,8 +12,8 @@ pub(crate) enum OllamaPromptData {
 
 pub(crate) struct OllamaPromptReader {
     tx_data: Option<Sender<OllamaPromptData>>,
-    tx_events: Option<Sender<PromptEvent>>,
-    rx_events: Receiver<PromptEvent>
+    tx_events: Sender<PromptEvent>,
+    rx_events: Option<Receiver<PromptEvent>>
 }
 
 impl OllamaPromptReader {
@@ -22,8 +22,8 @@ impl OllamaPromptReader {
         let (tx_ev, rx_ev) = channel(256);
         let obj = OllamaPromptReader {
             tx_data: Some(tx),
-            tx_events: Some(tx_ev.clone()),
-            rx_events: rx_ev
+            tx_events: tx_ev.clone(),
+            rx_events: Some(rx_ev)
         };
 
         tokio::spawn(async move {
@@ -95,11 +95,11 @@ impl OllamaPromptReader {
 }
 
 impl PromptResponse for OllamaPromptReader {
-    fn get_prompts(&self) -> &Receiver<PromptEvent> {
-        &self.rx_events
+    fn get_prompts(&mut self) -> Receiver<PromptEvent> {
+        self.rx_events.take().unwrap()
     }
 
-    fn get_control(&mut self) -> Sender<PromptEvent> {
-        self.tx_events.take().unwrap()
+    fn get_control(&self) -> Sender<PromptEvent> {
+        self.tx_events.clone()
     }
 }

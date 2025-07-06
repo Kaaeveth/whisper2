@@ -18,7 +18,7 @@ pub fn build_backend_store() -> BackendStore {
     let ollama = OllamaBackend::new();
     let backend_name: String;
     {
-        let backend = ollama.blocking_lock();
+        let backend = ollama.blocking_read();
         backend_name = backend.name().to_owned();
     }
     backends.insert(backend_name, ollama);

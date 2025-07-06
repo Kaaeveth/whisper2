@@ -6,6 +6,10 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("HTTP error")]
     Http(#[from] reqwest::Error),
+    #[error("Backend not found: {0}")]
+    BackendNotFound(String),
+    #[error("Model '{model:?}' not found in backend '{backend:?}'")]
+    ModelNotFound{model: String, backend: String},
     #[error("Internal error - There is a bug: {0}")]
     Internal(String),
     #[error("Internal error")]
@@ -18,6 +22,8 @@ pub enum Error {
 pub enum ErrorKind {
     Io(String),
     Http{status_code: u16, status_msg: String},
+    BackendNotFound(String),
+    ModelNotFound{model: String, backend: String},
     Internal(String)
 }
 
@@ -37,6 +43,12 @@ impl serde::Serialize for Error {
                     status_msg: e.to_string()
                 }
             },
+            Self::BackendNotFound(e) => {
+                ErrorKind::BackendNotFound(e.to_owned())
+            }
+            Self::ModelNotFound { model, backend } => {
+                ErrorKind::ModelNotFound { model: model.to_owned(), backend: backend.to_owned() }
+            }
             Self::Internal(msg) => {
                 ErrorKind::Internal(msg.to_owned())
             },
