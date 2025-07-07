@@ -11,6 +11,8 @@ pub(crate) enum OllamaPromptData {
     End
 }
 
+/// Reads raw responses from Ollama and parses them into
+/// a token stream. We expect UTF-8 data from Ollama (the default).
 pub(crate) struct OllamaPromptReader {
     tx_data: Option<Sender<OllamaPromptData>>,
     rx_events: Option<Receiver<PromptEvent>>,
