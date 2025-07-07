@@ -1,8 +1,8 @@
-import OllamaBackend from "./backends/Ollama.svelte";
 import type { Chat, ChatMessage } from "./Chat";
 import type { Model } from "./LLMBackend";
 import { load, type Store } from '@tauri-apps/plugin-store';
 import Settings from "./Settings.svelte";
+import OllamaBackend from "./backends/Ollama.svelte";
 
 export default class AppContext {
     private static instance?: AppContext;
@@ -63,8 +63,8 @@ export default class AppContext {
             ]);
 
             this.isInit = true;
-        } catch(e) {
-            console.error("Error initializing: "+e);
+        } catch(e: any) {
+            console.error(e);
             this.status = {msg: String(e), status: "error"};
             throw e;
         }

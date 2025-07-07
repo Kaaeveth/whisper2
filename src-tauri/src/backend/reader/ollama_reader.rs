@@ -74,12 +74,8 @@ impl OllamaPromptReader {
                             }
 
                             // Keep the remaining data without the newline
-                            if delimiter_idx < json_buffer.len()-1 {
-                                let slice = json_buffer[delimiter_idx+1..].to_owned();
-                                json_buffer = slice;
-                            } else {
-                                json_buffer.clear();
-                            }
+                            let slice = json_buffer[delimiter_idx+1..].to_owned();
+                            json_buffer = slice;
                         }
                     }
                 }

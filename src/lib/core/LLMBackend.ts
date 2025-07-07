@@ -13,11 +13,11 @@ export interface Backend {
 export type Capability = "completion"|"vision"|"tools";
 
 export interface Model {
-    readonly name: string;
-    readonly id: string;
-    readonly size: number;
-    readonly capabilities: Capability[];
-    readonly backend: Backend;
+    name: string;
+    id: string;
+    size: number;
+    capabilities: Capability[];
+    backend: Backend;
 
     /**
      * Gets whether the model is loaded into memory.

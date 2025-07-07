@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::sync::{Arc, Weak};
-use std::time::SystemTime;
+use time::UtcDateTime;
 use tokio::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
 use std::boxed::Box;
@@ -36,13 +36,17 @@ impl dyn Backend {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum Capability {
     Completion,
     Vision,
-    Tools
+    Tools,
+    Thinking
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(tag = "type", content = "data")]
+#[serde(rename_all = "snake_case")]
 pub enum PromptEvent {
     Message(ChatResponse),
     Stop
@@ -60,8 +64,8 @@ impl PromptEvent {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct RuntimeInfo {
     pub size_vram: i32,
-    pub expires_at: SystemTime,
-    pub model_name: String
+    pub expires_at: UtcDateTime,
+    pub name: String
 }
 
 pub trait PromptResponse: Send + Sync {
@@ -73,7 +77,7 @@ pub trait PromptResponse: Send + Sync {
 pub struct ModelInfo {
     pub name: String,
     pub id: String,
-    pub size: i32,
+    pub size: u64,
     pub capabilities: Vec<Capability>
 }
 
@@ -92,7 +96,7 @@ pub trait Model: Send + Sync {
 
     async fn prompt(
         &self,
-        content: &ChatMessage,
+        content: ChatMessage,
         history: &[ChatMessage],
         think: Option<bool>
     ) -> Result<Box<dyn PromptResponse>, Error>;

@@ -20,7 +20,6 @@ pub fn run() {
     tauri::Builder::default()
         .setup(setup)
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(commands::init!())
         .run(tauri::generate_context!())

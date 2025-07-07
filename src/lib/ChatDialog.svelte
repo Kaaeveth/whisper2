@@ -19,9 +19,6 @@
     let chatContainer: HTMLDivElement | undefined = $state();
 
     // Ctrl for aborting chat completions
-    // NOTE: The tauri http-plugin currently doesn't close the http response stream
-    //       when cancelling a request. Meaning Ollama will continue generating tokens.
-    // see: https://github.com/tauri-apps/plugins-workspace/pull/2562
     let promptAbortController = new AbortController();
 
     const scrollToLastChatMsg = () => 
@@ -42,7 +39,6 @@
         }
 
         // Start generating a chat completion
-        // TODO: handle errors & abort
         try {
             generating = true;
             const userPrompt: ChatMessage = {
@@ -53,7 +49,7 @@
             // Generate chat completion
             // We get a stream of strings, which we assemble below
             const promptResponse = props.model.prompt(
-                userPrompt,
+                $state.snapshot(userPrompt),
                 prependAssistantContext($state.snapshot(props.chat!.history)),
                 {think, abort: promptAbortController.signal}
             );
@@ -83,7 +79,10 @@
     
                 await props.chat!.save();
             }
-
+        } catch(e) {
+            // TODO: handle errors & abort
+            console.error(e);
+            throw e;
         } finally {
             generating = false;
             promptAbortController.abort();

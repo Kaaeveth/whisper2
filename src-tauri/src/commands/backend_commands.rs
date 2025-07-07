@@ -18,13 +18,15 @@ async fn get_model(backend_name: &str, model_name: &str, store: &BackendStore)
     let backend_ = get_backend(backend_name, &store)?;
     let backend = backend_.read().await;
 
-    let model = backend
-        .models()
-        .iter()
-        .find(|m| m.blocking_read().info().name == model_name);
+    let mut model: Option<SharedModel> = None;
+    for m in backend.models() {
+        if m.read().await.info().name == model_name {
+            model = Some(m.clone());
+        }
+    }
 
     match model {
-        Some(m) => Ok(m.clone()),
+        Some(m) => Ok(m),
         None => Err(Error::ModelNotFound { model: model_name.to_owned(), backend: backend_name.to_owned() })
     }
 }
@@ -46,6 +48,7 @@ pub async fn boot_backend(backend_name: &str, store: State<'_, BackendStore>)
 {
     let backend_ = get_backend(backend_name, &store)?;
     let backend = backend_.read().await;
+    println!("Booting backend {backend_name}");
     backend.boot().await?;
     Ok(())
 }
@@ -83,6 +86,15 @@ pub async fn get_models_for_backend(backend_name: &str, store: State<'_, Backend
     }
 
     Ok(models)
+}
+
+#[tauri::command]
+pub async fn get_running_models_in_backend(backend_name: &str, store: State<'_, BackendStore>)
+-> Result<Vec<RuntimeInfo>, Error>
+{
+    let backend_ = get_backend(backend_name, &store)?;
+    let backend = backend_.read().await;
+    backend.get_running_models().await
 }
 
 // === Models ===
@@ -143,8 +155,8 @@ pub async fn prompt_model(
     let model_ = get_model(backend_name, model_name, &store).await?;
     let model = model_.read().await;
 
-    let mut res = model.prompt(&content, &history, Some(think)).await?;
-    drop(model); // Dont need to lock the model anymore
+    let mut res = model.prompt(content, &history, Some(think)).await?;
+    drop(model); // Don't need to lock the model anymore
     let mut prompts = res.get_prompts();
     let rid = app_handle.resources_table().add_arc(Arc::new(PromptResponseResource(res)));
 
@@ -161,6 +173,7 @@ pub async fn prompt_model(
             }
         }
         prompts.close();
+        stop_prompt(rid, app_handle).await;
     });
     Ok(rid)
 }
@@ -180,7 +193,7 @@ impl Resource for PromptResponseResource {
     }
 
     fn close(self: Arc<Self>) {
-        // Backup stoping of prompt generation
+        // Backup stopping of prompt generation
         self.0.abort();
     }
 }

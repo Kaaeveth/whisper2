@@ -13,6 +13,8 @@ macro_rules! init {
             crate::commands::backend_commands::shutdown_backend,
             crate::commands::backend_commands::update_models_in_backend,
             crate::commands::backend_commands::get_models_for_backend,
+            crate::commands::backend_commands::get_running_models_in_backend,
+            // Models
             crate::commands::backend_commands::is_model_loaded,
             crate::commands::backend_commands::get_model_loaded_size,
             crate::commands::backend_commands::get_model_runtime_info,
