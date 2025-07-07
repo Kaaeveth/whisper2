@@ -1,6 +1,6 @@
 {
   "name": "whisper2",
-  "version": "0.8.0",
+  "version": "0.85.0",
   "description": "Simple chat client for LLMs",
   "type": "module",
   "scripts": {
