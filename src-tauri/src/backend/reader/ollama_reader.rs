@@ -57,27 +57,25 @@ impl OllamaPromptReader {
                             };
 
                             // Search for newline
-                            let delimiter_idx = json_buffer.chars().into_iter().position(|b| b == '\n');
-                            let Some(delimiter_idx) = delimiter_idx else {
+                            let Some((json_slice, slice)) = json_buffer.split_once('\n') else {
                                 continue;
                             };
 
                             // We have a full JSON object
-                            let json_slice = &json_buffer[0..delimiter_idx];
                             match serde_json::from_str(&json_slice) {
                                 Ok(value) => {
                                     let _ = tx_ev.send(PromptEvent::Message(value)).await;
                                 },
                                 Err(e) => {
                                     eprintln!("Invalid JSON received from Ollama chat completion: {:?}", e);
+                                    eprintln!("Value: {json_slice}");
                                     let _ = tx_ev.send(PromptEvent::Stop).await;
                                     break 'outer;
                                 }
                             }
 
                             // Keep the remaining data without the newline
-                            let slice = json_buffer[delimiter_idx+1..].to_owned();
-                            json_buffer = slice;
+                            json_buffer = slice.to_owned();
                         }
                     }
                 }

@@ -72,6 +72,7 @@ pub enum Capability {
 /// should also be true.
 /// [PromptEvent::Stop] is mainly used for cancellation
 /// of ongoing chat completions.
+/// TODO: Add stop reason or error variant
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]

@@ -81,7 +81,7 @@ export async function generateTitle(model: Model, history: ChatMessage[]): Promi
     for await(const chunk of model.prompt(instruction[0], instruction)) {
         title += chunk.message.content;
     }
-    return title;//.split(' ').slice(0,5).join(' ');
+    return title.length > 0 ? title : "Chat";
 }
 
 export function prependAssistantContext(history: ChatMessage[]): ChatMessage[] {
@@ -99,6 +99,8 @@ Always format your output using Markdown when appropriate:
 - Use headings to organize content.
 - Use fenced code blocks (\`\`\`language) for code.
 - Use tables when comparing options or presenting structured data.
+- Use emotes to catch the attention of the user for different sections of content.
+- Use Blockqoutes (>) to highlight important information and summaries.
 
 If the user prefers a different tone (e.g., more casual, more technical, more formal), adapt accordingly.
 Always assume the user is technically capable unless stated otherwise.
