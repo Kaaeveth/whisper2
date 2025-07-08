@@ -30,7 +30,12 @@
     async function startOllama() {
         if(ollamaStarting) return;
         ollamaStarting = true;
-        await ctx.ollama.boot();
+        try {
+            await ctx.ollama.boot();
+            await ctx.updateModels();
+        } catch(e) {
+            console.error(e);
+        }
     }
 </script>
 

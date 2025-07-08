@@ -1,12 +1,19 @@
 use serde::ser::SerializeStruct;
 use std::{
-    process::{Command, Output},
-    str,
+    ops::Deref, process::{Command, Output}, str
 };
 
 use crate::errors;
 
 pub struct CommandOutput(Output);
+
+impl Deref for CommandOutput {
+    type Target = Output;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[tauri::command]
 pub async fn execute(cmd: &str, args: Vec<&str>) -> Result<CommandOutput, errors::Error> {

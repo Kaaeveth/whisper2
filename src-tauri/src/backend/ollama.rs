@@ -157,7 +157,26 @@ impl Backend for OllamaBackendInner {
     }
 
     async fn boot(&self) -> Result<(), errors::Error> {
-        execute("ollama app", vec!["serve"]).await.map(|_| ())
+        let res = execute("ollama app", vec![]).await?;
+        if !res.status.success() {
+            return Err(Error::BackendBoot {
+                backend: self.name().to_owned(),
+                reason: str::from_utf8(&res.stderr).unwrap_or("Unknown").to_owned()
+            });
+        }
+
+        const TRIES: u32 = 3;
+        // Poll for Ollama boot
+        for _ in 0..TRIES {
+            if self.running().await {
+                return Ok(())
+            }
+            tokio::time::sleep(Duration::from_secs(2000)).await;
+        }
+        Err(Error::BackendBoot {
+            backend: self.name().to_owned(),
+            reason: format!("Ollama did not start after {TRIES} tries")
+        })
     }
 
     async fn shutdown(&self) -> Result<(), errors::Error> {

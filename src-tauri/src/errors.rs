@@ -8,6 +8,8 @@ pub enum Error {
     Http(#[from] reqwest::Error),
     #[error("Backend not found: {0}")]
     BackendNotFound(String),
+    #[error("Error starting backend '{backend:?}': {reason:?}")]
+    BackendBoot{reason: String, backend: String},
     #[error("Model '{model:?}' not found in backend '{backend:?}'")]
     ModelNotFound{model: String, backend: String},
     #[error("Internal error - There is a bug: {0}")]
@@ -23,6 +25,7 @@ pub enum ErrorKind {
     Io(String),
     Http{status_code: u16, status_msg: String},
     BackendNotFound(String),
+    BackendBoot{reason: String, backend: String},
     ModelNotFound{model: String, backend: String},
     Internal(String)
 }
@@ -45,6 +48,9 @@ impl serde::Serialize for Error {
             },
             Self::BackendNotFound(e) => {
                 ErrorKind::BackendNotFound(e.to_owned())
+            }
+            Self::BackendBoot{reason, backend} => {
+                ErrorKind::BackendBoot {reason: reason.to_owned(), backend: backend.to_owned()}
             }
             Self::ModelNotFound { model, backend } => {
                 ErrorKind::ModelNotFound { model: model.to_owned(), backend: backend.to_owned() }

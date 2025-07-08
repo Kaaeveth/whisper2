@@ -47,14 +47,9 @@ export default abstract class BackendImpl implements Backend {
      * @returns A promise which resolves when the backend has started.
      */
     async boot(): Promise<void> {
-        try{
-            await invoke("boot_backend", {
-                backendName: this.name,
-            });
-        } catch (e) {
-            console.error(e);
-            throw e;
-        }
+        await invoke("boot_backend", {
+            backendName: this.name,
+        });
     }
 
     /**
