@@ -101,9 +101,8 @@ pub struct RuntimeInfo {
 
 pub trait PromptResponse: Send + Sync {
     /// Sink for receiving generated tokens.
-    /// Must only be called once.
-    /// FIXME: Wrap in Option
-    fn get_prompts(&mut self) -> Receiver<PromptEvent>;
+    /// If None, then the Receiver was already taken.
+    fn get_prompts(&mut self) -> Option<Receiver<PromptEvent>>;
 
     /// Stops an ongoing chat completion.
     /// Has no effect if already completed.

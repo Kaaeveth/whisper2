@@ -31,70 +31,92 @@ async fn get_model(backend_name: &str, model_name: &str, store: &BackendStore)
     }
 }
 
+macro_rules! with_llm {
+    ($backend_name:expr, $store:expr, read|$b:ident $com:block) => {{
+        let backend_ = get_backend($backend_name, $store)?;
+        let $b = backend_.read().await;
+        $com
+    }};
+    ($backend_name:expr, $store:expr, write|$b:ident $com:block) => {{
+        let backend_ = get_backend($backend_name, $store)?;
+        let mut $b = backend_.write().await;
+        $com
+    }};
+    ($backend_name:expr, $store:expr, $model_name:expr, read|$m:ident $com:block) => {{
+        let model_ = get_model($backend_name, $model_name, $store).await?;
+        let $m = model_.read().await;
+        $com
+    }};
+    ($backend_name:expr, $store:expr, $model_name:expr, write|$m:ident $com:block) => {{
+        let model_ = get_model($backend_name, $model_name, $store).await?;
+        let mut $m = model_.write().await;
+        $com
+    }};
+}
+
 // === Backend ===
 
 #[tauri::command]
 pub async fn is_backend_running(backend_name: &str, store: State<'_, BackendStore>) 
 -> Result<bool, Error>
 {
-    let backend_ = get_backend(backend_name, &store)?;
-    let backend = backend_.read().await;
-    Ok(backend.running().await)
+    with_llm!(backend_name, &store, read|backend {
+        Ok(backend.running().await)
+    })
 }
 
 #[tauri::command]
 pub async fn boot_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    let backend_ = get_backend(backend_name, &store)?;
-    let backend = backend_.read().await;
-    println!("Booting backend {backend_name}");
-    backend.boot().await?;
-    Ok(())
+    with_llm!(backend_name, &store, read|backend {
+        println!("Booting backend {backend_name}");
+        backend.boot().await?;
+        Ok(())
+    })
 }
 
 #[tauri::command]
 pub async fn shutdown_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    let backend_ = get_backend(backend_name, &store)?;
-    let backend = backend_.read().await;
-    backend.shutdown().await?;
-    Ok(())
+    with_llm!(backend_name, &store, read|backend {
+        backend.shutdown().await?;
+        Ok(())
+    })
 }
 
 #[tauri::command]
 pub async fn update_models_in_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    let backend_ = get_backend(backend_name, &store)?;
-    let mut backend = backend_.write().await;
-    backend.update_models().await
+    with_llm!(backend_name, &store, write|backend {
+        backend.update_models().await
+    })
 }
 
 #[tauri::command]
 pub async fn get_models_for_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<Vec<ModelInfo>, Error>
 {
-    let backend_ = get_backend(backend_name, &store)?;
-    let backend = backend_.read().await;
+    with_llm!(backend_name, &store, read|backend {
+        let mut models = Vec::new();
+        for m in backend.models() {
+            let model = m.read().await;
+            models.push(model.info().clone());
+        }
 
-    let mut models = Vec::new();
-    for m in backend.models() {
-        let model = m.read().await;
-        models.push(model.info().clone());
-    }
-
-    Ok(models)
+        Ok(models)
+    })
 }
 
 #[tauri::command]
 pub async fn get_running_models_in_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<Vec<RuntimeInfo>, Error>
 {
-    let backend_ = get_backend(backend_name, &store)?;
-    let backend = backend_.read().await;
-    backend.get_running_models().await
+    with_llm!(backend_name, &store, read|backend {
+        backend.get_running_models().await
+    })
 }
 
 // === Models ===
@@ -103,45 +125,45 @@ pub async fn get_running_models_in_backend(backend_name: &str, store: State<'_, 
 pub async fn is_model_loaded(backend_name: &str, model_name: &str, store: State<'_, BackendStore>)
 -> Result<bool, Error>
 {
-    let model_ = get_model(backend_name, model_name, &store).await?;
-    let model = model_.read().await;
-    Ok(model.loaded().await?)
+    with_llm!(backend_name, &store, model_name, read|model {
+        Ok(model.loaded().await?)
+    })
 }
 
 #[tauri::command]
 pub async fn get_model_loaded_size(backend_name: &str, model_name: &str, store: State<'_, BackendStore>)
 -> Result<i32, Error>
 {
-    let model_ = get_model(backend_name, model_name, &store).await?;
-    let model = model_.read().await;
-    Ok(model.get_loaded_size().await?)
+    with_llm!(backend_name, &store, model_name, read|model {
+        Ok(model.get_loaded_size().await?)
+    })
 }
 
 #[tauri::command]
 pub async fn get_model_runtime_info(backend_name: &str, model_name: &str, store: State<'_, BackendStore>)
 -> Result<RuntimeInfo, Error>
 {
-    let model_ = get_model(backend_name, model_name, &store).await?;
-    let model = model_.read().await;
-    model.get_runtime_info().await?.ok_or(Error::Internal("Model is not running".into()))
+    with_llm!(backend_name, &store, model_name, read|model {
+        model.get_runtime_info().await?.ok_or(Error::Internal("Model is not running".into()))
+    })
 }
 
 #[tauri::command]
 pub async fn load_model(backend_name: &str, model_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    let model_ = get_model(backend_name, model_name, &store).await?;
-    let mut model = model_.write().await;
-    Ok(model.load().await?)
+    with_llm!(backend_name, &store, model_name, write|model {
+        Ok(model.load().await?)
+    })
 }
 
 #[tauri::command]
 pub async fn unload_model(backend_name: &str, model_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    let model_ = get_model(backend_name, model_name, &store).await?;
-    let mut model = model_.write().await;
-    Ok(model.unload().await?)
+    with_llm!(backend_name, &store, model_name, write|model {
+        Ok(model.unload().await?)
+    })
 }
 
 #[tauri::command]
@@ -152,30 +174,29 @@ pub async fn prompt_model(
     app_handle: tauri::AppHandle
 ) -> Result<ResourceId, Error>
 {
-    let model_ = get_model(backend_name, model_name, &store).await?;
-    let model = model_.read().await;
+    with_llm!(backend_name, &store, model_name, read|model {
+        let mut res = model.prompt(content, &history, Some(think)).await?;
+        drop(model); // Don't need to lock the model anymore
+        let mut prompts = res.get_prompts().ok_or(Error::Internal("Prompt receiver was already taken".into()))?;
+        let rid = app_handle.resources_table().add_arc(Arc::new(PromptResponseResource(res)));
 
-    let mut res = model.prompt(content, &history, Some(think)).await?;
-    drop(model); // Don't need to lock the model anymore
-    let mut prompts = res.get_prompts();
-    let rid = app_handle.resources_table().add_arc(Arc::new(PromptResponseResource(res)));
-
-    tokio::spawn(async move {
-        loop {
-            if let Some(prompt) = prompts.recv().await {
-                let stop = prompt.is_stop();
-                if response_channel.send(prompt).is_err() || stop {
+        tokio::spawn(async move {
+            loop {
+                if let Some(prompt) = prompts.recv().await {
+                    let stop = prompt.is_stop();
+                    if response_channel.send(prompt).is_err() || stop {
+                        break;
+                    }
+                } else {
+                    let _ = response_channel.send(PromptEvent::Stop);
                     break;
                 }
-            } else {
-                let _ = response_channel.send(PromptEvent::Stop);
-                break;
             }
-        }
-        prompts.close();
-        stop_prompt(rid, app_handle).await;
-    });
-    Ok(rid)
+            prompts.close();
+            stop_prompt(rid, app_handle).await;
+        });
+        Ok(rid)
+    })
 }
 
 #[tauri::command]

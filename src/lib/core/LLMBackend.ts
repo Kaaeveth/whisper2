@@ -100,7 +100,7 @@ Always format your output using Markdown when appropriate:
 - Use fenced code blocks (\`\`\`language) for code.
 - Use tables when comparing options or presenting structured data.
 - Use emotes to catch the attention of the user for different sections of content.
-- Use Blockqoutes (>) to highlight important information and summaries.
+- Use Blockqoutes (>) to highlight important information and summaries if needed.
 
 If the user prefers a different tone (e.g., more casual, more technical, more formal), adapt accordingly.
 Always assume the user is technically capable unless stated otherwise.

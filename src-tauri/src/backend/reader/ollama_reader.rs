@@ -31,7 +31,8 @@ impl OllamaPromptReader {
 
         let abort = obj.abort.clone();
         tokio::spawn(async move {
-            let mut buffer: Vec<OllamaPromptData> = Vec::with_capacity(1024);
+            const BUFFER_SIZE: usize = 1024;
+            let mut buffer: Vec<OllamaPromptData> = Vec::with_capacity(BUFFER_SIZE);
             let mut json_buffer = String::new();
 
             'outer: loop {
@@ -41,7 +42,7 @@ impl OllamaPromptReader {
 
                 // Buffer data until we have a complete JSON object
                 // We send the object right after parsing it and clear the JSON buffer
-                let _ = rx.recv_many(&mut buffer, 1024).await;
+                let _ = rx.recv_many(&mut buffer, BUFFER_SIZE).await;
                 for data in &buffer {
                     match data {
                         OllamaPromptData::End => break 'outer,
@@ -87,14 +88,15 @@ impl OllamaPromptReader {
         return obj;
     }
 
+    /// Sender for queueing data received from Ollama
     pub fn data_intake(&self) -> Sender<OllamaPromptData> {
         self.tx_data.as_ref().unwrap().clone()
     }
 }
 
 impl PromptResponse for OllamaPromptReader {
-    fn get_prompts(&mut self) -> Receiver<PromptEvent> {
-        self.rx_events.take().unwrap()
+    fn get_prompts(&mut self) -> Option<Receiver<PromptEvent>> {
+        self.rx_events.take()
     }
 
     fn abort(&self) {
