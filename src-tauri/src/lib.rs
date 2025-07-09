@@ -21,6 +21,7 @@ pub fn run() {
         .setup(setup)
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(commands::init!())
         .run(tauri::generate_context!())
         .expect("Error starting Whisper2");

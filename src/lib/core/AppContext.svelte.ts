@@ -3,6 +3,7 @@ import type { Model } from "./LLMBackend";
 import { load, type Store } from '@tauri-apps/plugin-store';
 import Settings from "./Settings.svelte";
 import OllamaBackend from "./backends/Ollama.svelte";
+import { invoke } from "@tauri-apps/api/core";
 
 export default class AppContext {
     private static instance?: AppContext;
@@ -13,6 +14,8 @@ export default class AppContext {
         }
         return AppContext.instance;
     }
+
+    private static CHAT_STORE_PATH: string = "chats.json";
 
     constructor() {
         this.ollamaBackend = new OllamaBackend();
@@ -56,7 +59,7 @@ export default class AppContext {
 
         try {
             await this._settings.init();
-            this._chatStore = await load("chats.json");
+            this._chatStore = await load(AppContext.CHAT_STORE_PATH);
             await Promise.all([
                 this.loadChats(),
                 this.updateModels()
@@ -93,14 +96,17 @@ export default class AppContext {
      * @param chat The chat to save
      */
     async saveChat(chat: Chat) {
-        let snapshot: Partial<Chat>;
-        if(chat instanceof ReactiveChat) {
-            snapshot = (chat as ReactiveChat).toPoco();
-        } else {
-            snapshot = $state.snapshot(chat) as Partial<Chat>;
-        }
+        let snapshot: Partial<Chat> = this.convertChatToSerializable(chat);
         delete snapshot.uuid;
         this._chatStore.set(chat.uuid, snapshot);
+    }
+
+    private convertChatToSerializable(chat: Chat) {
+        if(chat instanceof ReactiveChat) {
+            return (chat as ReactiveChat).toPoco();
+        } else {
+            return $state.snapshot(chat) as Partial<Chat>;
+        }
     }
 
     /**
@@ -129,6 +135,25 @@ export default class AppContext {
             }
         }
         this._chats.sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime());
+    }
+
+    async saveChatsToDisk(): Promise<void> {
+        await this._chatStore.save();
+        await invoke("save_chats", {
+            storeName: AppContext.CHAT_STORE_PATH
+        });
+    }
+
+    async importChatsFromDisk(): Promise<void> {
+        await invoke("import_chats", {
+            storeName: AppContext.CHAT_STORE_PATH
+        });
+        await this.loadChats();
+    }
+
+    async deleteAllChats(): Promise<void> {
+        await this._chatStore.clear();
+        await this.loadChats();
     }
 
     /**

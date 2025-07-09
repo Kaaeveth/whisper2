@@ -1,5 +1,6 @@
 pub(crate) mod process_commands;
 pub(crate) mod backend_commands;
+pub(crate) mod chat_commands;
 
 #[macro_export]
 macro_rules! init {
@@ -21,7 +22,10 @@ macro_rules! init {
             crate::commands::backend_commands::load_model,
             crate::commands::backend_commands::unload_model,
             crate::commands::backend_commands::prompt_model,
-            crate::commands::backend_commands::stop_prompt
+            crate::commands::backend_commands::stop_prompt,
+            // Chats
+            crate::commands::chat_commands::save_chats,
+            crate::commands::chat_commands::import_chats
         ]
     };
 }

@@ -6,6 +6,8 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("HTTP error")]
     Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    SerdeJson(#[from] serde_json::Error),
     #[error("Backend not found: {0}")]
     BackendNotFound(String),
     #[error("Error starting backend '{backend:?}': {reason:?}")]
@@ -16,6 +18,10 @@ pub enum Error {
     Internal(String),
     #[error("Internal error")]
     Unknown
+}
+
+pub fn internal(msg: impl ToString) -> Error {
+    Error::Internal(msg.to_string())
 }
 
 #[derive(serde::Serialize)]
@@ -40,6 +46,10 @@ impl serde::Serialize for Error {
                 let error_msg = e.to_string();
                 ErrorKind::Io(error_msg)
             },
+            Self::SerdeJson(e) => {
+                let error_msg = e.to_string();
+                ErrorKind::Io(error_msg)
+            }
             Self::Http(e) => {
                 ErrorKind::Http {
                     status_code: e.status().unwrap_or(StatusCode::OK).as_u16(),
