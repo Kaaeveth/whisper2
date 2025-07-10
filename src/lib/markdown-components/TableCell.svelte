@@ -15,7 +15,7 @@
 </script>
 
 {#if header}
-    <TableHeadCell>{@render children?.()}</TableHeadCell>
+    <TableHeadCell class="dark:text-gray-200">{@render children?.()}</TableHeadCell>
 {:else}
-    <TableBodyCell>{@render children?.()}</TableBodyCell>
+    <TableBodyCell class="dark:text-gray-200">{@render children?.()}</TableBodyCell>
 {/if}

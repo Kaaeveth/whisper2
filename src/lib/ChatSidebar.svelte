@@ -53,7 +53,7 @@
 
 {#if props.sidebar.open}
 <Sidebar backdrop={false} isOpen={props.sidebar.open} activateClickOutside={false} closeSidebar={() => props.sidebar.open = !props.sidebar.open}
-         class="z-50" divClass="flex flex-col h-screen" position="static" alwaysOpen={true}
+         class="z-50" divClass="flex flex-col h-screen dark:bg-gray-900" position="static" alwaysOpen={true}
     >
     <SidebarGroup class="mb-4">
         <div class="flex flex-row gap-2">

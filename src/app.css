@@ -39,9 +39,14 @@
 }
 
 body {
-    margin: 0;
+  margin: 0;
+}
+
+html.dark {
+  scrollbar-color: var(--color-gray-700) var(--color-gray-900);
+  scrollbar-width: thin;
 }
 
 .sideitem:hover .dots {
-    display: block;
+  display: block;
 }

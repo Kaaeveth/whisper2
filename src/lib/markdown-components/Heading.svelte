@@ -20,7 +20,7 @@
 {#if depth < 7}
     <Heading 
         id={id}
-        class="my-4"
+        class="my-4 dark:text-gray-100"
         tag={("h"+Math.max(2, depth)) as "h1" | "h2" | "h3" | "h4" | "h5" | "h6" | undefined}
     >
         {@render children?.()}

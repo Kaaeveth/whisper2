@@ -8,6 +8,6 @@
     const { children }: Props = $props()
 </script>
 
-<Blockquote border bg class="my-4 p-4">
+<Blockquote border bg class="my-4 p-4 dark:bg-gray-700">
   <P size="lg" height="relaxed">{@render children?.()}</P>
 </Blockquote>

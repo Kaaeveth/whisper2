@@ -1,6 +1,5 @@
 <script lang="ts" module>
     import hljs from 'highlight.js';
-    import 'highlight.js/styles/atom-one-light.css';
     import { ClipboardOutline } from 'flowbite-svelte-icons';
     import { Tooltip } from 'flowbite-svelte';
 </script>
@@ -63,7 +62,7 @@
 
 <pre>
     <div class="codeblock">
-        <div class="codeblock-header hljs">
+        <div class="codeblock-header hljs dark:!text-white">
             <span>{hasLang ? lang : "Code"}</span>
             <button onclick={copyToClipboard}>
                 <ClipboardOutline size="sm"></ClipboardOutline>

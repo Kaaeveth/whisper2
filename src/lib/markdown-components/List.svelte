@@ -11,6 +11,6 @@
     const { ordered = false, start = 1, children }: Props = $props()
 </script>
 
-<List tag={ordered ? "ol" : "ul"} class="ps-2">
+<List tag={ordered ? "ol" : "ul"} class="ps-2 dark:text-gray-100">
     {@render children?.()}
 </List>
