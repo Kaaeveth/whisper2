@@ -47,14 +47,14 @@ pub struct Chat {
     pub created_at: UtcDateTime
 }
 
-fn parse_utc_datetime<'de, D>(deserializer: D) -> Result<UtcDateTime, D::Error>
+pub fn parse_utc_datetime<'de, D>(deserializer: D) -> Result<UtcDateTime, D::Error>
 where D: Deserializer<'de>
 {
     let utc_str = String::deserialize(deserializer)?;
     UtcDateTime::parse(&utc_str, &Rfc3339).map_err(serde::de::Error::custom)
 }
 
-fn serialize_utc_datetime<S>(time: &UtcDateTime, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize_utc_datetime<S>(time: &UtcDateTime, serializer: S) -> Result<S::Ok, S::Error>
 where S: Serializer
 {
     let timestamp = timestamp_to_string(&time).map_err(serde::ser::Error::custom)?;

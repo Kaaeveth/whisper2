@@ -136,8 +136,8 @@ impl Backend for OllamaBackendInner {
 
     async fn get_running_models(&self) -> Result<Vec<RuntimeInfo>, errors::Error> {
         let res = self.call_backend_default("ps").await?;
-        let models: ModelResponse<Vec<RuntimeInfo>> = res.json().await?;
-        Ok(models.models.into_iter().flat_map(|m| m).collect())
+        let models: ModelResponse<RuntimeInfo> = res.json().await?;
+        Ok(models.models.into_iter().map(|m| m).collect())
     }
 
     async fn running(&self) -> bool {
@@ -204,7 +204,7 @@ impl Model for OllamaModel {
         Ok(self.runtime_info.read().await.is_some())
     }
 
-    async fn get_loaded_size(&self) -> Result<i32, Error> {
+    async fn get_loaded_size(&self) -> Result<i64, Error> {
         let _ = self.get_runtime_info().await?;
         Ok(self.runtime_info.read().await.as_ref()
             .and_then(|info| Some(info.size_vram))

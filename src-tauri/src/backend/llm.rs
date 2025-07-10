@@ -7,7 +7,7 @@ use std::boxed::Box;
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 
-use crate::backend::chat::{ChatMessage, ChatResponse};
+use crate::backend::chat::{ChatMessage, ChatResponse, parse_utc_datetime, serialize_utc_datetime};
 use crate::errors::Error;
 
 pub type SharedModel = Arc<RwLock<Box<dyn Model>>>;
@@ -94,7 +94,8 @@ impl PromptEvent {
 /// See [ModelInfo] for general information.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct RuntimeInfo {
-    pub size_vram: i32,
+    pub size_vram: i64,
+    #[serde(deserialize_with = "parse_utc_datetime", serialize_with = "serialize_utc_datetime")]
     pub expires_at: UtcDateTime,
     pub name: String
 }
@@ -137,7 +138,7 @@ pub trait Model: Send + Sync {
     async fn loaded(&self) -> Result<bool, Error>;
 
     /// Size in bytes of the model in RAM or VRAM
-    async fn get_loaded_size(&self) -> Result<i32, Error>;
+    async fn get_loaded_size(&self) -> Result<i64, Error>;
     async fn get_runtime_info(&self) -> Result<Option<RuntimeInfo>, Error>;
 
     /// Loads the model.
