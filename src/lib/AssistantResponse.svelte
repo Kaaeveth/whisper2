@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Hr, Li, Spinner, TableBody, TableBodyRow, TableHead } from "flowbite-svelte";
+    import { Hr, Li, Spinner, TableBody, TableBodyRow } from "flowbite-svelte";
     import SvelteMarkdown from "@humanspeak/svelte-markdown";
     import type { Renderers } from "@humanspeak/svelte-markdown";
     import Heading from "./markdown-components/Heading.svelte";
@@ -11,6 +11,7 @@
     import TableCell from "./markdown-components/TableCell.svelte";
     import Table from "./markdown-components/Table.svelte";
     import Paragraph from "./markdown-components/Paragraph.svelte";
+    import TableHead from "./markdown-components/TableHead.svelte";
 
     interface Props {
         content: string;
