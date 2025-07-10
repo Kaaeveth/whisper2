@@ -1,6 +1,7 @@
 pub(crate) mod process_commands;
 pub(crate) mod backend_commands;
 pub(crate) mod chat_commands;
+pub(crate) mod ollama_commands;
 
 #[macro_export]
 macro_rules! init {
@@ -25,7 +26,10 @@ macro_rules! init {
             crate::commands::backend_commands::stop_prompt,
             // Chats
             crate::commands::chat_commands::save_chats,
-            crate::commands::chat_commands::import_chats
+            crate::commands::chat_commands::import_chats,
+            // Ollama
+            crate::commands::ollama_commands::ollama_set_api_url,
+            crate::commands::ollama_commands::ollama_get_api_url
         ]
     };
 }

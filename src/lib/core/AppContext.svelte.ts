@@ -5,6 +5,10 @@ import Settings from "./Settings.svelte";
 import OllamaBackend from "./backends/Ollama.svelte";
 import { invoke } from "@tauri-apps/api/core";
 
+interface Models {
+    ollama: Model[]
+}
+
 export default class AppContext {
     private static instance?: AppContext;
 
@@ -25,7 +29,8 @@ export default class AppContext {
     private isInit: boolean = false;
     private _status: AppStatus = $state({status: "ok", msg: ""});
     private ollamaBackend: OllamaBackend;
-    private _models: Model[] = $state([]);
+    private _models: Models = $state({ollama: []});
+    private _flatModels: Model[] = $derived(Object.values(this._models).flat());
 
     // Store for saving and loading chats from disk
     // Initialized at startup
@@ -39,7 +44,7 @@ export default class AppContext {
     }
 
     get models(): Model[] {
-        return this._models;
+        return this._flatModels;
     }
 
     get chats(): Chat[] {
@@ -59,6 +64,7 @@ export default class AppContext {
 
         try {
             await this._settings.init();
+            await this.ollamaBackend.init();
             this._chatStore = await load(AppContext.CHAT_STORE_PATH);
             await Promise.all([
                 this.loadChats(),
@@ -69,7 +75,7 @@ export default class AppContext {
         } catch(e: any) {
             console.error(e);
             this.status = {msg: String(e), status: "error"};
-            throw e;
+            //throw e;
         }
     }
 
@@ -163,10 +169,15 @@ export default class AppContext {
      * @returns Available Models of all backends
      */
     async updateModels(): Promise<Model[]> {
+        await this.updateOllamaModels();
+        return this._flatModels;
+    }
+
+    async updateOllamaModels(): Promise<void> {
+        this._models.ollama = [];
         if(await this.ollamaBackend.running()) {
-            this._models = await this.ollamaBackend.updateModels();
+            this._models.ollama = await this.ollamaBackend.updateModels();
         }
-        return this._models;
     }
 
     newChat(): Chat {

@@ -7,6 +7,17 @@
 
     const ctx = AppContext.getInstance();
     let updateModels = $state(ctx.updateModels());
+
+    let ollamaUrl = $state(ctx.ollama.apiUrl.href);
+    async function updateOllamaUrl() {
+        try {
+            const url = new URL(ollamaUrl);
+            await ctx.ollama.setUrl(url);
+            await ctx.updateOllamaModels();
+        } catch(e) {
+            console.error(e);
+        }
+    }
 </script>
 
 <div class="w-full">
@@ -50,8 +61,8 @@
     <Heading tag="h4" class="font-medium mb-4">Ollama</Heading>
     <div class="grid gap-3 gap-y-2 grid-cols-3 w-3/4">
         <Label for="ollamaEndpoint">Endpoint</Label>
-        <Input value={ctx.ollama.apiUrl.href} class="row-start-2 col-span-2" type="url" id="ollamaEndpoint" />
-        <Button class="row-start-2">Update</Button>
+        <Input bind:value={ollamaUrl} class="row-start-2 col-span-2" type="url" id="ollamaEndpoint" />
+        <Button onclick={() => updateOllamaUrl()} class="row-start-2">Update</Button>
 
         <Label class="row-start-3" for="ollamaAddModel">Add model</Label>
         <Input class="row-start-4 col-span-2" placeholder="mistral:latest" type="url" id="ollamaAddModel" />

@@ -3,7 +3,7 @@ use tauri::{ipc::Channel, Manager, Resource, ResourceId, State};
 
 use crate::{backend::{chat::ChatMessage, llm::{ModelInfo, PromptEvent, PromptResponse, RuntimeInfo, SharedBackend, SharedModel}, BackendStore}, errors::Error};
 
-fn get_backend(backend_name: &str, store: &BackendStore)
+pub(super) fn get_backend(backend_name: &str, store: &BackendStore)
 -> Result<SharedBackend, Error>
 {
     store.get().unwrap()
@@ -31,6 +31,7 @@ async fn get_model(backend_name: &str, model_name: &str, store: &BackendStore)
     }
 }
 
+#[macro_export]
 macro_rules! with_llm {
     ($backend_name:expr, $store:expr, read|$b:ident $com:block) => {{
         let backend_ = get_backend($backend_name, $store)?;
@@ -132,7 +133,7 @@ pub async fn is_model_loaded(backend_name: &str, model_name: &str, store: State<
 
 #[tauri::command]
 pub async fn get_model_loaded_size(backend_name: &str, model_name: &str, store: State<'_, BackendStore>)
--> Result<i32, Error>
+-> Result<i64, Error>
 {
     with_llm!(backend_name, &store, model_name, read|model {
         Ok(model.get_loaded_size().await?)

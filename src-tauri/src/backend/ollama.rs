@@ -5,9 +5,11 @@ use tokio::sync::{OnceCell, RwLock};
 
 use async_trait::async_trait;
 use serde::Deserialize;
-use reqwest::{Client, Method, RequestBuilder, Response};
+use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
 use url::Url;
 use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, ModelInfo, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{OllamaPromptData, OllamaPromptReader}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
+
+pub(crate) static OLLAMA_NAME: &'static str = "Ollama";
 
 pub struct OllamaBackendInner {
     http_client: Client,
@@ -20,11 +22,12 @@ pub struct OllamaBackendInner {
 pub struct OllamaBackend(pub SharedBackendImpl<OllamaBackendInner>);
 
 impl OllamaBackend {
-    pub fn new() -> SharedBackend {
+    pub fn new(mut api_url: Url) -> SharedBackend {
+        OllamaBackendInner::prepare_api_url(&mut api_url);
         let backend: Box<dyn Backend> = Box::new(
             OllamaBackendInner {
                 http_client: Client::new(),
-                api_url: Url::parse("http://localhost:11434/api/").unwrap(),
+                api_url: api_url,
                 models: Vec::new(),
                 self_ref: OnceCell::new()
             }
@@ -64,6 +67,27 @@ impl OllamaBackendInner {
     {
         self.call_backend(url, Method::GET, |r| {r}).await
     }
+
+    pub fn set_api_url(&mut self, url: impl IntoUrl) -> Result<(), errors::Error>
+    {
+        let mut url = url.into_url()?;
+        OllamaBackendInner::prepare_api_url(&mut url);
+
+        self.api_url = url;
+        Ok(())
+    }
+
+    /// Append trailing slash (/) if not already there
+    pub fn prepare_api_url(url: &mut Url) {
+        if !url.as_str().ends_with("/") {
+            url.set_path(&format!("{}/", url.path()));
+        }
+    }
+
+    pub fn get_api_url(&self) -> &Url
+    {
+        &self.api_url
+    }
 }
 
 impl Deref for OllamaBackend {
@@ -94,7 +118,7 @@ struct ModelDetail {
 #[async_trait]
 impl Backend for OllamaBackendInner {
     fn name(&self) -> &str {
-        "Ollama"
+        OLLAMA_NAME
     }
 
     fn models(&self) -> &[SharedModel] {
