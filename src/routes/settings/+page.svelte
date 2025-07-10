@@ -2,7 +2,7 @@
     import AppContext from "$lib/core/AppContext.svelte";
     import Settings from "$lib/core/Settings.svelte";
     import ModalDialog from "$lib/ModalDialog.svelte.ts";
-    import { Button, DarkMode, Heading, ButtonGroup, Checkbox } from "flowbite-svelte";
+    import { Button, DarkMode, Heading, ButtonGroup, Toggle } from "flowbite-svelte";
 
     const ctx = AppContext.getInstance();
     const dialog = ModalDialog.get();
@@ -79,6 +79,6 @@
         <Button color="red" onclick={() => deleteChats()}>Delete</Button>
     </div>
     <div class="flex flex-col my-4">
-        <Checkbox bind:checked={autoScroll}>Autoscroll in chat dialog</Checkbox>
+        <Toggle bind:checked={autoScroll}>Autoscroll in chat dialog</Toggle>
     </div>
 </div>
