@@ -4,7 +4,7 @@
 Small and simple Windows desktop chat client for large language models written in Rust and Svelte.
 Only Ollama is currently supported, with OpenAI and LangChain integration in planning.
 
-![whisper2](https://bofloos.de/whisper/whisper2-preview.png)
+![whisper2-preview](https://github.com/user-attachments/assets/b787e09a-0b7a-42d2-8b48-26cd82f8080d)
 
 ## Compiling
 Development:
