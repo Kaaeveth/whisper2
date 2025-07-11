@@ -18,6 +18,7 @@
         <nav class="flex flex-col gap-2 w-35">
             <NavButton href="/settings">⚙ General</NavButton>
             <NavButton href="/settings/models">🤖 Models</NavButton>
+            <NavButton href="/settings/about">ℹ️ About</NavButton>
         </nav>
         <div class="pl-12 grow-1 max-w-2xl">
             {@render children()}

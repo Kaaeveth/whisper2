@@ -1,6 +1,6 @@
 [package]
 name = "whisper2"
-version = "0.89.0"
+version = "0.9.0"
 description = "Simple chat client for LLMs"
 authors = ["Dominik Strutz"]
 edition = "2021"

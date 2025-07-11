@@ -64,8 +64,8 @@
         <Input bind:value={ollamaUrl} class="row-start-2 col-span-2" type="url" id="ollamaEndpoint" />
         <Button onclick={() => updateOllamaUrl()} class="row-start-2">Update</Button>
 
-        <Label class="row-start-3" for="ollamaAddModel">Add model</Label>
+        <!-- <Label class="row-start-3" for="ollamaAddModel">Add model</Label>
         <Input class="row-start-4 col-span-2" placeholder="mistral:latest" type="url" id="ollamaAddModel" />
-        <Button class="row-start-4">Pull</Button>
+        <Button class="row-start-4" disabled>Pull</Button> -->
     </div>
 </div>

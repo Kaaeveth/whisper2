@@ -138,18 +138,14 @@ export class ModelImpl implements Model {
                         ctrl.enqueue(chunk.data);
                     }
                 });
-                try{
-                    rid = await invoke("prompt_model", {
-                        backendName: this.backend.name,
-                        modelName: this.name,
-                        content,
-                        history,
-                        think: options?.think ?? false,
-                        responseChannel
-                    });
-                } catch(e) {
-                    console.error(e);
-                }
+                rid = await invoke("prompt_model", {
+                    backendName: this.backend.name,
+                    modelName: this.name,
+                    content,
+                    history,
+                    think: options?.think ?? false,
+                    responseChannel
+                });
             },
             cancel: async _ => {
                 await invoke("stop_prompt", {rid});
