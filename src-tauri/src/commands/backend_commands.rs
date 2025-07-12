@@ -71,9 +71,7 @@ pub async fn boot_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
     with_llm!(backend_name, &store, read|backend {
-        println!("Booting backend {backend_name}");
-        backend.boot().await?;
-        Ok(())
+        backend.boot().await
     })
 }
 
@@ -82,8 +80,7 @@ pub async fn shutdown_backend(backend_name: &str, store: State<'_, BackendStore>
 -> Result<(), Error>
 {
     with_llm!(backend_name, &store, read|backend {
-        backend.shutdown().await?;
-        Ok(())
+        backend.shutdown().await
     })
 }
 

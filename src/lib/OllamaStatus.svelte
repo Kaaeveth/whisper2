@@ -9,10 +9,11 @@
     const ctx = AppContext.getInstance();
 
     async function checkOllamaHealth() {
-        ollamaRunning = await ctx.ollama.running();
-        if(ollamaRunning && ollamaStarting) {
+        if(!ollamaStarting)
+            ollamaRunning = await ctx.ollama.running();
+        else if(ollamaRunning) {
             ollamaStarting = false;
-            await ctx.updateModels();
+            await ctx.updateOllamaModels();
         }
     }
 
@@ -32,7 +33,9 @@
         ollamaStarting = true;
         try {
             await ctx.ollama.boot();
-            await ctx.updateModels();
+            await ctx.updateOllamaModels();
+            ollamaStarting = false;
+            ollamaRunning = true;
         } catch(e) {
             console.error(e);
         }
@@ -45,7 +48,7 @@
         size="xl"
         color="#f0f704">
     </ExclamationCircleOutline>
-    <p class="truncate">Ollama is not running</p>
+    <p class="truncate dark:text-gray-400">Ollama is not running</p>
     <Button
         class="p-1.5"
         color="red"

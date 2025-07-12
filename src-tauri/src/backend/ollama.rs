@@ -1,5 +1,5 @@
 use core::str;
-use std::{ops::Deref, sync::Arc, time::Duration};
+use std::{ops::Deref, process::{Command, ExitStatus}, sync::Arc, time::Duration};
 use time::UtcDateTime;
 use tokio::sync::{OnceCell, RwLock};
 
@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
 use url::Url;
-use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, ModelInfo, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{OllamaPromptData, OllamaPromptReader}}, commands::process_commands::{execute, terminate}, errors::{self, Error}};
+use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, ModelInfo, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{OllamaPromptData, OllamaPromptReader}}, commands::process_commands::terminate, errors::{self, Error}};
 
 pub(crate) static OLLAMA_NAME: &'static str = "Ollama";
 
@@ -186,11 +186,19 @@ impl Backend for OllamaBackendInner {
     }
 
     async fn boot(&self) -> Result<(), errors::Error> {
-        let res = execute("ollama app", vec![]).await?;
-        if !res.status.success() {
+        let res: ExitStatus;
+        #[cfg(windows)]
+        {
+            // We start 'ollama app', which is the version running
+            // in the background (in the windows tray).
+            // This way, the user is informed that Ollama is running as well.
+            use std::process::Stdio;
+            res = Command::new("pwsh").arg("-Command").arg("& 'ollama app.exe'").stdout(Stdio::null()).status()?;
+        }
+        if !res.success() {
             return Err(Error::BackendBoot {
                 backend: self.name().to_owned(),
-                reason: str::from_utf8(&res.stderr).unwrap_or("Unknown").to_owned()
+                reason: "Could not start 'ollama app'".into()
             });
         }
 
