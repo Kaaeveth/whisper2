@@ -27,3 +27,4 @@ npm run tauri build -- --no-bundle
 - [x] Proper dark mode
 - [ ] Support for vision models
 - [ ] RAG support for local files and knowledge bases
+- [ ] Support for MathML

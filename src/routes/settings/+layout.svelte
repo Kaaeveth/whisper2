@@ -16,7 +16,7 @@
     <div class="flex flex-row mt-8">
         <!-- Sidebar -->
         <nav class="flex flex-col gap-2 w-35">
-            <NavButton href="/settings">⚙ General</NavButton>
+            <NavButton href="/settings">⚙️ General</NavButton>
             <NavButton href="/settings/models">🤖 Models</NavButton>
             <NavButton href="/settings/about">ℹ️ About</NavButton>
         </nav>
