@@ -140,6 +140,11 @@ impl Backend for OllamaBackendInner {
                 }
             ).await?.json().await?;
 
+            // A backend doesn't support embedding directly.
+            if detail_res.capabilities.contains(&Capability::Embedding) {
+                continue;
+            }
+
             models.push(Arc::new(RwLock::new(Box::new(
                 OllamaModel {
                     info: ModelInfo {

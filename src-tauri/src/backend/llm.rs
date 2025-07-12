@@ -62,13 +62,14 @@ impl dyn Backend {
 /// Capabilities of a model.
 /// This is not a complete list and we currently
 /// don't support all of those functionalities.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Capability {
     Completion,
     Vision,
     Tools,
-    Thinking
+    Thinking,
+    Embedding
 }
 
 /// A token (or chunk) of a chat completion.
