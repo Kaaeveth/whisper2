@@ -9,9 +9,10 @@
 
 	// Update dark mode for global css imports
 	const isDark = () => document.documentElement.attributes.getNamedItem("class")?.value?.includes("dark") ?? false;
-	let darkMode = $state(isDark());
+	let darkMode = $state(isDark()); // This is only an initial value, not the actual selected theme
 
 	onMount(() => {
+		darkMode = isDark(); // Only now the document root is loaded with the actual theme
 		const darkModeObserver = new MutationObserver(mut => {
 			const dark = mut.find(m => m.attributeName === "class");
 			if(!dark) return;
