@@ -2,7 +2,7 @@
 
 **Work in progess**<br>
 Small and simple Windows desktop chat client for large language models written in Rust and Svelte.
-Only Ollama is currently supported, with OpenAI and LangChain integration in planning.
+Only Ollama is currently supported, with OpenAI and RAG support in planning.
 
 ![whisper2-preview](https://github.com/user-attachments/assets/b787e09a-0b7a-42d2-8b48-26cd82f8080d)
 
@@ -26,3 +26,4 @@ npm run tauri build -- --no-bundle
 - [x] Configuration of Ollama backend
 - [x] Proper dark mode
 - [ ] Support for vision models
+- [ ] RAG support for local files and knowledge bases
