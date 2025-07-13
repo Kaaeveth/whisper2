@@ -158,7 +158,7 @@ impl Backend for OllamaBackendInner {
                 }
             ))));
         }
-        
+
         self.models = models;
         Ok(())
     }
@@ -193,7 +193,13 @@ impl Backend for OllamaBackendInner {
             // in the background (in the windows tray).
             // This way, the user is informed that Ollama is running as well.
             use std::process::Stdio;
-            res = Command::new("pwsh").arg("-Command").arg("& 'ollama app.exe'").stdout(Stdio::null()).status()?;
+            res = Command::new("pwsh")
+                .arg("-WindowStyle")
+                .arg("Hidden")
+                .arg("-Command")
+                .arg("& 'ollama app.exe'")
+                .stdout(Stdio::null())
+                .status()?;
         }
         if !res.success() {
             return Err(Error::BackendBoot {
@@ -272,7 +278,7 @@ impl Model for OllamaModel {
     }
 
     async fn load(&mut self) -> Result<(), Error> {
-        // Ollama models cannot be loaded manually 
+        // Ollama models cannot be loaded manually
         Ok(())
     }
 
@@ -332,7 +338,7 @@ impl Model for OllamaModel {
             }
             let _ = sink.send(OllamaPromptData::End).await;
         });
-        
+
         Ok(Box::new(reader))
     }
 }
