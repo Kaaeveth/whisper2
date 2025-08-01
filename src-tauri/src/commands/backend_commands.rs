@@ -58,7 +58,7 @@ macro_rules! with_llm {
 // === Backend ===
 
 #[tauri::command]
-pub async fn is_backend_running(backend_name: &str, store: State<'_, BackendStore>) 
+pub async fn is_backend_running(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<bool, Error>
 {
     with_llm!(backend_name, &store, read|backend {
@@ -200,8 +200,9 @@ pub async fn prompt_model(
 #[tauri::command]
 pub async fn stop_prompt(rid: ResourceId, app_handle: tauri::AppHandle)
 {
-    if let Ok(r) = app_handle.resources_table().take::<PromptResponseResource>(rid) {
-        r.0.abort();
+    let res = app_handle.resources_table().take::<PromptResponseResource>(rid);
+    if let Ok(res) = res {
+        res.0.abort().await;
     }
 }
 
@@ -213,6 +214,8 @@ impl Resource for PromptResponseResource {
 
     fn close(self: Arc<Self>) {
         // Backup stopping of prompt generation
-        self.0.abort();
+        tokio::spawn(async move {
+            self.0.abort().await;
+        });
     }
 }

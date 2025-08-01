@@ -1,1 +1,1 @@
-pub(crate) mod ollama_reader;
+pub(crate) mod ndjson_reader;

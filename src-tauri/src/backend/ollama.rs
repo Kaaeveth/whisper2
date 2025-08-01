@@ -1,13 +1,29 @@
 use core::str;
-use std::{ops::Deref, process::{Command, ExitStatus}, sync::Arc, time::Duration};
+use std::{
+    ops::Deref,
+    process::{Command, ExitStatus},
+    sync::Arc,
+    time::Duration,
+};
 use time::UtcDateTime;
 use tokio::sync::{OnceCell, RwLock};
 
+use crate::{
+    backend::{
+        chat::ChatMessage,
+        llm::{
+            Backend, Capability, Model, ModelInfo, PromptResponse, RuntimeInfo, SharedBackend,
+            SharedBackendImpl, SharedModel, WeakBackend,
+        },
+        reader::ndjson_reader::{NdJsonData, NdJsonReader},
+    },
+    commands::process_commands::terminate,
+    errors::{self, Error},
+};
 use async_trait::async_trait;
-use serde::Deserialize;
 use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
+use serde::Deserialize;
 use url::Url;
-use crate::{backend::{chat::ChatMessage, llm::{Backend, Capability, Model, ModelInfo, PromptResponse, RuntimeInfo, SharedBackend, SharedBackendImpl, SharedModel, WeakBackend}, reader::ollama_reader::{OllamaPromptData, OllamaPromptReader}}, commands::process_commands::terminate, errors::{self, Error}};
 
 pub(crate) static OLLAMA_NAME: &'static str = "Ollama";
 
@@ -15,7 +31,7 @@ pub struct OllamaBackendInner {
     http_client: Client,
     api_url: Url,
     models: Vec<SharedModel>,
-    self_ref: OnceCell<WeakBackend>
+    self_ref: OnceCell<WeakBackend>,
 }
 
 #[derive(Clone)]
@@ -24,14 +40,12 @@ pub struct OllamaBackend(pub SharedBackendImpl<OllamaBackendInner>);
 impl OllamaBackend {
     pub fn new(mut api_url: Url) -> SharedBackend {
         OllamaBackendInner::prepare_api_url(&mut api_url);
-        let backend: Box<dyn Backend> = Box::new(
-            OllamaBackendInner {
-                http_client: Client::new(),
-                api_url: api_url,
-                models: Vec::new(),
-                self_ref: OnceCell::new()
-            }
-        );
+        let backend: Box<dyn Backend> = Box::new(OllamaBackendInner {
+            http_client: Client::new(),
+            api_url: api_url,
+            models: Vec::new(),
+            self_ref: OnceCell::new(),
+        });
 
         let shared_backend = Arc::new(RwLock::new(backend));
         {
@@ -50,26 +64,20 @@ impl OllamaBackendInner {
         &self,
         url: &str,
         method: Method,
-        req_builder: impl FnOnce(RequestBuilder) -> RequestBuilder + 'static
-    ) -> reqwest::Result<reqwest::Response>
-    {
+        req_builder: impl FnOnce(RequestBuilder) -> RequestBuilder + 'static,
+    ) -> reqwest::Result<reqwest::Response> {
         let url = self.api_url.join(url).unwrap();
-        let mut builder = self.http_client.request(
-            method,
-            url
-        );
+        let mut builder = self.http_client.request(method, url);
         builder = req_builder(builder);
 
         self.http_client.execute(builder.build()?).await
     }
 
-    async fn call_backend_default<>(&self, url: &str) -> reqwest::Result<reqwest::Response>
-    {
-        self.call_backend(url, Method::GET, |r| {r}).await
+    async fn call_backend_default(&self, url: &str) -> reqwest::Result<reqwest::Response> {
+        self.call_backend(url, Method::GET, |r| r).await
     }
 
-    pub fn set_api_url(&mut self, url: impl IntoUrl) -> Result<(), errors::Error>
-    {
+    pub fn set_api_url(&mut self, url: impl IntoUrl) -> Result<(), errors::Error> {
         let mut url = url.into_url()?;
         OllamaBackendInner::prepare_api_url(&mut url);
 
@@ -84,8 +92,7 @@ impl OllamaBackendInner {
         }
     }
 
-    pub fn get_api_url(&self) -> &Url
-    {
+    pub fn get_api_url(&self) -> &Url {
         &self.api_url
     }
 }
@@ -102,17 +109,17 @@ impl Deref for OllamaBackend {
 struct ModelResInner {
     name: String,
     model: String,
-    size: u64
+    size: u64,
 }
 
 #[derive(Deserialize, Debug)]
 struct ModelResponse<T> {
-    models: Vec<T>
+    models: Vec<T>,
 }
 
 #[derive(Deserialize)]
 struct ModelDetail {
-    capabilities: Vec<Capability>
+    capabilities: Vec<Capability>,
 }
 
 #[async_trait]
@@ -132,31 +139,34 @@ impl Backend for OllamaBackendInner {
 
         for m in model_json.models {
             let model_name = m.name.clone();
-            let detail_res: ModelDetail = self.call_backend(
-                "show",
-                Method::POST,
-                move |req| {
+            let detail_res: ModelDetail = self
+                .call_backend("show", Method::POST, move |req| {
                     req.json(&serde_json::json!({"model": model_name}))
-                }
-            ).await?.json().await?;
+                })
+                .await?
+                .json()
+                .await?;
 
             // A backend doesn't support embedding directly.
             if detail_res.capabilities.contains(&Capability::Embedding) {
                 continue;
             }
 
-            models.push(Arc::new(RwLock::new(Box::new(
-                OllamaModel {
-                    info: ModelInfo {
-                        name: m.name,
-                        id: m.model,
-                        size: m.size,
-                        capabilities: detail_res.capabilities,
-                    },
-                    backend: self.self_ref.get().ok_or(Error::Unknown)?.upgrade().ok_or(Error::Unknown)?,
-                    runtime_info: RwLock::new(None)
-                }
-            ))));
+            models.push(Arc::new(RwLock::new(Box::new(OllamaModel {
+                info: ModelInfo {
+                    name: m.name,
+                    id: m.model,
+                    size: m.size,
+                    capabilities: detail_res.capabilities,
+                },
+                backend: self
+                    .self_ref
+                    .get()
+                    .ok_or(Error::Unknown)?
+                    .upgrade()
+                    .ok_or(Error::Unknown)?,
+                runtime_info: RwLock::new(None),
+            }))));
         }
 
         self.models = models;
@@ -170,18 +180,16 @@ impl Backend for OllamaBackendInner {
     }
 
     async fn running(&self) -> bool {
-        let res = self.call_backend(
-            "version",
-            Method::HEAD,
-            |req| {
+        let res = self
+            .call_backend("version", Method::HEAD, |req| {
                 req.header("Cache", "no-store")
-                   .timeout(Duration::from_secs(2))
-            }
-        ).await;
+                    .timeout(Duration::from_secs(2))
+            })
+            .await;
 
         match res {
             Ok(res) => res.status().is_success(),
-            Err(_) => false
+            Err(_) => false,
         }
     }
 
@@ -204,7 +212,7 @@ impl Backend for OllamaBackendInner {
         if !res.success() {
             return Err(Error::BackendBoot {
                 backend: self.name().to_owned(),
-                reason: "Could not start 'ollama app'".into()
+                reason: "Could not start 'ollama app'".into(),
             });
         }
 
@@ -212,13 +220,13 @@ impl Backend for OllamaBackendInner {
         // Poll for Ollama boot
         for _ in 0..TRIES {
             if self.running().await {
-                return Ok(())
+                return Ok(());
             }
             tokio::time::sleep(Duration::from_secs(2000)).await;
         }
         Err(Error::BackendBoot {
             backend: self.name().to_owned(),
-            reason: format!("Ollama did not start after {TRIES} tries")
+            reason: format!("Ollama did not start after {TRIES} tries"),
         })
     }
 
@@ -230,7 +238,27 @@ impl Backend for OllamaBackendInner {
 pub struct OllamaModel {
     info: ModelInfo,
     backend: SharedBackend,
-    runtime_info: RwLock<Option<RuntimeInfo>>
+    runtime_info: RwLock<Option<RuntimeInfo>>,
+}
+
+impl OllamaModel {
+    async fn load_model(&self, unload: bool) -> Result<(), Error> {
+        let backend = self.backend.read().await;
+        let backend = backend
+            .as_any()
+            .downcast_ref::<OllamaBackendInner>()
+            .ok_or(errors::internal("Expected Ollama backend"))?;
+
+        let model_name = self.info.name.clone();
+        let res = backend.call_backend("generate", Method::POST, move |req| {
+            req.json(&serde_json::json!({
+                "model": model_name,
+                "keep_alive": if unload {Some(0)} else {None}
+            }))
+        }).await?;
+        let _ = res.error_for_status()?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -249,7 +277,11 @@ impl Model for OllamaModel {
 
     async fn get_loaded_size(&self) -> Result<i64, Error> {
         let _ = self.get_runtime_info().await?;
-        Ok(self.runtime_info.read().await.as_ref()
+        Ok(self
+            .runtime_info
+            .read()
+            .await
+            .as_ref()
             .and_then(|info| Some(info.size_vram))
             .unwrap_or(-1))
     }
@@ -278,26 +310,23 @@ impl Model for OllamaModel {
     }
 
     async fn load(&mut self) -> Result<(), Error> {
-        // Ollama models cannot be loaded manually
-        Ok(())
+        self.load_model(false).await
     }
 
     async fn unload(&mut self) -> Result<(), Error> {
-        // Ollama models cannot be unloaded manually
-        Ok(())
+        self.load_model(true).await
     }
 
     async fn prompt(
         &self,
         content: ChatMessage,
         history: &[ChatMessage],
-        think: Option<bool>
-    ) -> Result<Box<dyn PromptResponse>, Error>
-    {
+        think: Option<bool>,
+    ) -> Result<Box<dyn PromptResponse>, Error> {
         let mut res: Response;
         {
             let model_name = self.info.id.clone();
-            let mut messages: Vec<ChatMessage> = Vec::with_capacity(history.len()+1);
+            let mut messages: Vec<ChatMessage> = Vec::with_capacity(history.len() + 1);
             history.iter().for_each(|msg| messages.push(msg.clone()));
             messages.push(content);
 
@@ -307,27 +336,25 @@ impl Model for OllamaModel {
                 .downcast_ref::<OllamaBackendInner>()
                 .ok_or(Error::Internal("Could not get Ollama backend".into()))?;
 
-            res = ollama.call_backend(
-                "chat",
-                Method::POST,
-                move |req| {
+            res = ollama
+                .call_backend("chat", Method::POST, move |req| {
                     req.json(&serde_json::json!({
                         "model": model_name,
                         "keep_alive": "10m",
                         "think": think.unwrap_or(false),
                         "messages": messages
                     }))
-                }
-            ).await?;
+                })
+                .await?;
         }
 
-        let reader = OllamaPromptReader::new();
+        let reader = NdJsonReader::new();
         let sink = reader.data_intake();
 
         tokio::spawn(async move {
             while let Ok(chunk) = res.chunk().await {
                 if let Some(chunk) = chunk {
-                    if let Err(_) = sink.send(OllamaPromptData::Data(chunk)).await {
+                    if let Err(_) = sink.send(NdJsonData::Data(chunk)).await {
                         break;
                     }
                 } else {
@@ -336,7 +363,7 @@ impl Model for OllamaModel {
                     break;
                 }
             }
-            let _ = sink.send(OllamaPromptData::End).await;
+            let _ = sink.send(NdJsonData::End).await;
         });
 
         Ok(Box::new(reader))

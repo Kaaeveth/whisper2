@@ -1,42 +1,39 @@
+use async_trait::async_trait;
 use core::str;
-use std::sync::{atomic::AtomicBool, Arc};
 
 use bytes::Bytes;
 use tokio::sync::mpsc::{Sender, Receiver, channel};
 
 use crate::backend::llm::{PromptEvent, PromptResponse};
 
-pub(crate) enum OllamaPromptData {
+pub(crate) enum NdJsonData {
     Data(Bytes),
     End
 }
 
-/// Reads raw responses from Ollama and parses them into
-/// a token stream. We expect UTF-8 data from Ollama (the default).
-pub(crate) struct OllamaPromptReader {
-    tx_data: Option<Sender<OllamaPromptData>>,
-    rx_events: Option<Receiver<PromptEvent>>,
-    abort: Arc<AtomicBool>
+/// Reads raw responses as ND-JSON (like from Ollama) and parses them into
+/// a token stream. We expect UTF-8 data (the default using Ollama).
+pub(crate) struct NdJsonReader {
+    tx_data: Sender<NdJsonData>,
+    rx_events: Option<Receiver<PromptEvent>>
 }
 
-impl OllamaPromptReader {
+impl NdJsonReader {
     pub fn new() -> Self {
-        let (tx, mut rx) = channel(1024);
+        const BUFFER_SIZE: usize = 1024;
+        let (tx, mut rx) = channel(BUFFER_SIZE);
         let (tx_ev, rx_ev) = channel(256);
-        let obj = OllamaPromptReader {
-            tx_data: Some(tx),
-            rx_events: Some(rx_ev),
-            abort: Arc::new(AtomicBool::new(false))
+        let obj = NdJsonReader {
+            tx_data: tx,
+            rx_events: Some(rx_ev)
         };
 
-        let abort = obj.abort.clone();
         tokio::spawn(async move {
-            const BUFFER_SIZE: usize = 1024;
-            let mut buffer: Vec<OllamaPromptData> = Vec::with_capacity(BUFFER_SIZE);
+            let mut buffer: Vec<NdJsonData> = Vec::with_capacity(BUFFER_SIZE);
             let mut json_buffer = String::new();
 
             'outer: loop {
-                if rx.is_closed() || abort.load(std::sync::atomic::Ordering::Relaxed) {
+                if rx.is_closed() {
                     break;
                 }
 
@@ -45,8 +42,8 @@ impl OllamaPromptReader {
                 let _ = rx.recv_many(&mut buffer, BUFFER_SIZE).await;
                 for data in &buffer {
                     match data {
-                        OllamaPromptData::End => break 'outer,
-                        OllamaPromptData::Data(data) => {
+                        NdJsonData::End => break 'outer,
+                        NdJsonData::Data(data) => {
                             // Buffer the data as string
                             match str::from_utf8(&data) {
                                 Ok(str) => json_buffer.push_str(str),
@@ -89,17 +86,18 @@ impl OllamaPromptReader {
     }
 
     /// Sender for queueing data received from Ollama
-    pub fn data_intake(&self) -> Sender<OllamaPromptData> {
-        self.tx_data.as_ref().unwrap().clone()
+    pub fn data_intake(&self) -> Sender<NdJsonData> {
+        self.tx_data.clone()
     }
 }
 
-impl PromptResponse for OllamaPromptReader {
+#[async_trait]
+impl PromptResponse for NdJsonReader {
     fn get_prompts(&mut self) -> Option<Receiver<PromptEvent>> {
         self.rx_events.take()
     }
 
-    fn abort(&self) {
-        self.abort.store(true, std::sync::atomic::Ordering::Relaxed);
+    async fn abort(&self) {
+        let _ = self.tx_data.send(NdJsonData::End).await;
     }
 }

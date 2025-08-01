@@ -105,6 +105,7 @@ pub struct RuntimeInfo {
     pub name: String
 }
 
+#[async_trait]
 pub trait PromptResponse: Send + Sync {
     /// Sink for receiving generated tokens.
     /// If None, then the Receiver was already taken.
@@ -112,7 +113,7 @@ pub trait PromptResponse: Send + Sync {
 
     /// Stops an ongoing chat completion.
     /// Has no effect if already completed.
-    fn abort(&self);
+    async fn abort(&self);
 }
 
 #[derive(Serialize, Deserialize, Clone)]
