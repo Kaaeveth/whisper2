@@ -3,6 +3,7 @@
     import AppContext from "./core/AppContext.svelte";
     import { onMount } from "svelte";
     import { Button } from "flowbite-svelte";
+    import { handleError } from "./Util";
 
     let ollamaRunning = $state(true);
     let ollamaStarting = $state(false);
@@ -37,7 +38,7 @@
             ollamaStarting = false;
             ollamaRunning = true;
         } catch(e) {
-            console.error(e);
+            handleError(e);
         }
     }
 </script>

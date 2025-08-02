@@ -1,6 +1,6 @@
 <script lang="ts">
     import AppContext from "$lib/core/AppContext.svelte";
-    import { formatByteSize } from "$lib/Util";
+    import { formatByteSize, handleError } from "$lib/Util";
     import { Heading, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
     import { Input, Label, Button } from "flowbite-svelte";
     import { RefreshOutline } from "flowbite-svelte-icons";
@@ -15,7 +15,7 @@
             await ctx.ollama.setUrl(url);
             await ctx.updateOllamaModels();
         } catch(e) {
-            console.error(e);
+            handleError(e);
         }
     }
 </script>

@@ -6,14 +6,14 @@
     import ChatDialog from "$lib/ChatDialog.svelte";
     import ModelSelection from "$lib/ModelSelection.svelte";
     import type { Snapshot } from "./$types";
-    import StatusDisplay from "$lib/StatusDisplay.svelte";
     import OllamaStatus from "$lib/OllamaStatus.svelte";
     import Settings from "$lib/core/Settings.svelte";
+    import { handleError } from "$lib/Util";
 
     const ctx = AppContext.getInstance();
     const sidebar = new ToggableElement(true);
     let autoScroll = $derived(ctx.settings.get<boolean>(Settings.AUTO_SCROLL));
-    
+
     // State about all chats and the current selected one.
     // Every child component uses theses states.
     let selectedChatIdx = $state(-1);
@@ -46,7 +46,7 @@
 
     async function deleteChat(idx: number) {
         if(idx >= ctx.chats.length || idx < 0) {
-            console.error("Cannot delete chat: Idx out of bounds");
+            handleError("Cannot delete chat: Idx out of bounds");
             return;
         }
 
@@ -55,7 +55,7 @@
 </script>
 
 <div class="flex flex-row h-screen">
-    <ChatSidebar 
+    <ChatSidebar
         chatTitles={chatTitles}
         bind:selectedChatIdx
         sidebar={sidebar}
@@ -65,7 +65,6 @@
     <div class="flex flex-col gap-2 p-4 grow-1" class:pl-0={!sidebar.open}>
         <div class="flex min-w-xs gap-5">
             <ModelSelection models={ctx.models} bind:selectedModel></ModelSelection>
-            <StatusDisplay></StatusDisplay>
             <OllamaStatus></OllamaStatus>
         </div>
         <ChatDialog

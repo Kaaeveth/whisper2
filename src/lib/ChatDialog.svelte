@@ -4,6 +4,7 @@
     import { CaretRightOutline, StopOutline } from "flowbite-svelte-icons";
     import type { Chat, ChatMessage } from "./core/Chat";
     import { generateTitle, prependAssistantContext, type Model } from "./core/LLMBackend";
+    import { handleError } from '$lib/Util';
 
     interface Props {
         chat?: Chat;
@@ -21,7 +22,7 @@
     // Ctrl for aborting chat completions
     let promptAbortController = new AbortController();
 
-    const scrollToLastChatMsg = () => 
+    const scrollToLastChatMsg = () =>
         chatContainer?.scrollTo({behavior: "smooth", top: chatContainer!.scrollHeight});
 
     /**
@@ -76,13 +77,11 @@
                 // Generate title for the chat on first prompt
                 if(needsTitle)
                     props.chat!.title = await generateTitle(props.model, $state.snapshot(props.chat!.history));
-    
+
                 await props.chat!.save();
             }
-        } catch(e) {
-            // TODO: handle errors & abort
-            console.error(e);
-            throw e;
+        } catch(e: any) {
+            handleError(e);
         } finally {
             generating = false;
             promptAbortController.abort();
@@ -138,7 +137,7 @@
                             <CaretRightOutline size="xl"></CaretRightOutline>
                         </Button>
                     {:else}
-                        <Button 
+                        <Button
                             onclick={() => promptAbortController.abort()}
                             disabled={!generating} pill outline class="p-0 border-0 ml-auto">
                             <StopOutline size="xl"></StopOutline>

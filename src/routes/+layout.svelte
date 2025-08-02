@@ -1,10 +1,11 @@
 <script lang="ts">
     import AppContext from '$lib/core/AppContext.svelte';
     import ModalDialog from '$lib/ModalDialog.svelte';
+    import Snackbar from '$lib/Snackbar.svelte';
     import { DarkMode } from 'flowbite-svelte';
 	import '../app.css';
     import { onMount } from 'svelte';
-	
+
 	let { children } = $props();
 
 	// Update dark mode for global css imports
@@ -53,4 +54,5 @@
 		<!-- Included only for its update logic -->
 		<DarkMode></DarkMode>
 	</div>
+	<Snackbar></Snackbar>
 </main>

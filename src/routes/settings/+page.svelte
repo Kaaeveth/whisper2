@@ -2,6 +2,7 @@
     import AppContext from "$lib/core/AppContext.svelte";
     import Settings from "$lib/core/Settings.svelte";
     import ModalDialog from "$lib/ModalDialog.svelte.ts";
+    import { handleError } from "$lib/Util";
     import { Button, DarkMode, Heading, ButtonGroup, Toggle } from "flowbite-svelte";
 
     const ctx = AppContext.getInstance();
@@ -15,7 +16,7 @@
         try {
             await ctx.saveChatsToDisk();
         } catch(e) {
-            console.error(e);
+            handleError(e);
         }
     }
 
@@ -32,7 +33,7 @@
                 await ctx.importChatsFromDisk();
             }
         } catch(e) {
-            console.error(e);
+            handleError(e);
         }
     }
 
@@ -49,7 +50,7 @@
                 await ctx.deleteAllChats();
             }
         } catch(e) {
-            console.error(e);
+            handleError(e);
         }
     }
 </script>

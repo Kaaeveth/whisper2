@@ -1,6 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { Backend, Capability, Model, PromptOptions } from "$lib/core/LLMBackend";
 import type { ChatMessage, ChatResponse } from "$lib/core/Chat";
+import { handleError } from "$lib/Util";
 
 export default abstract class BackendImpl implements Backend {
     abstract readonly name: string;
@@ -93,11 +94,11 @@ export class ModelImpl implements Model {
             });
             return res;
         } catch(e) {
-            console.warn(e);
+            handleError(e, "warn");
             return undefined;
         }
     }
-    
+
     async loaded(): Promise<boolean> {
         return invoke("is_model_loaded", {
             backendName: this.backend.name,

@@ -182,7 +182,8 @@ impl Backend for OllamaBackendInner {
     async fn running(&self) -> bool {
         let res = self
             .call_backend("version", Method::HEAD, |req| {
-                req.header("Cache", "no-store")
+                req
+                    .header("Cache", "no-store")
                     .timeout(Duration::from_secs(2))
             })
             .await;

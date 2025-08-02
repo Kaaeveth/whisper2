@@ -4,6 +4,7 @@ import { load, type Store } from '@tauri-apps/plugin-store';
 import Settings from "./Settings.svelte";
 import OllamaBackend from "./backends/Ollama.svelte";
 import { invoke } from "@tauri-apps/api/core";
+import { handleError } from "$lib/Util";
 
 interface Models {
     ollama: Model[]
@@ -27,7 +28,6 @@ export default class AppContext {
     }
 
     private isInit: boolean = false;
-    private _status: AppStatus = $state({status: "ok", msg: ""});
     private ollamaBackend: OllamaBackend;
     private _models: Models = $state({ollama: []});
     private _flatModels: Model[] = $derived(Object.values(this._models).flat());
@@ -73,19 +73,8 @@ export default class AppContext {
 
             this.isInit = true;
         } catch(e: any) {
-            console.error(e);
-            this.status = {msg: String(e), status: "error"};
-            //throw e;
+            handleError(e);
         }
-    }
-
-    set status(status: AppStatus) {
-        this._status.status = status?.status ?? "ok";
-        this._status.msg = status?.msg ?? "";
-    }
-
-    get status(): AppStatus {
-        return this._status;
     }
 
     /**
@@ -190,7 +179,7 @@ export default class AppContext {
 class ReactiveChat implements Chat {
     public title: string = $state("New Chat");
     public history: ChatMessage[] = $state([]);
-    
+
     private ctx: AppContext;
     private _uuid: string;
     private _createdAt: Date;
@@ -232,9 +221,4 @@ class ReactiveChat implements Chat {
             createdAt: this._createdAt
         }
     }
-}
-
-export interface AppStatus {
-    status: "ok"|"warn"|"error";
-    msg: string;
 }
