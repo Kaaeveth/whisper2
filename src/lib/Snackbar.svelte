@@ -48,7 +48,7 @@
         show({
             content: msg,
             level: "info",
-            duration: 4000
+            duration: 3000
         });
     }
 
@@ -56,7 +56,7 @@
         show({
             content: msg,
             level: "warn",
-            duration: 5000
+            duration: 4000
         });
         console.warn(msg);
     }
@@ -65,7 +65,7 @@
         show({
             content: msg,
             level: "error",
-            duration: 6000
+            duration: 4000
         });
         console.error(msg);
     }

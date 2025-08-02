@@ -23,7 +23,14 @@
             return ctx.chats[selectedChatIdx];
         }
     });
-    let selectedModel = $state(undefined);
+
+    // Load and save the selected model to disk when it changes
+    const modelName = ctx.settings.get<string>(Settings.SELECTED_MODEL);
+    let selectedModel = $state(ctx.models.find(m => m.name === modelName));
+    $effect(() => {
+        if (!selectedModel) return;
+        ctx.settings.set(Settings.SELECTED_MODEL, selectedModel.name);
+    });
 
     export const snapshot: Snapshot = {
         capture: () => ({selectedChatIdx, selectedModel}),

@@ -23,7 +23,7 @@ export default class Settings {
      * @param key Key of the setting
      * @returns The setting or undefined of not found
      */
-    public get<T>(key: string): T|undefined {        
+    public get<T>(key: string): T|undefined {
         return this._settings[key];
     }
 
@@ -44,4 +44,5 @@ export default class Settings {
     }
 
     public static AUTO_SCROLL: string = "autoScroll";
+    public static SELECTED_MODEL: string = "selectedModel";
 }
