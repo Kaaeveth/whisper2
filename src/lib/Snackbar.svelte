@@ -1,4 +1,5 @@
 <script lang="ts" module>
+    import { CloseOutline } from 'flowbite-svelte-icons';
     import { fly } from 'svelte/transition';
 
     export interface Notification {
@@ -10,10 +11,24 @@
         key: number;
     }
 
-    const MSG_COLORS: {[level in Notification["level"]]: string} = {
-        "info": "bg-blue-100 border-blue-400 text-blue-500",
-        "warn": "bg-orange-100 border-orange-400 text-orange-500",
-        "error": "bg-red-200 border-red-400 text-red-500"
+    const MSG_COLORS: {
+        [level in Notification["level"]]: {
+            container: string;
+            progressbar: string;
+        }
+    } = {
+        "info": {
+            container: "bg-blue-100 border-blue-400 text-blue-500",
+            progressbar: "bg-blue-600"
+        },
+        "warn": {
+            container: "bg-orange-100 border-orange-400 text-orange-500",
+            progressbar: "br-orange-600"
+        },
+        "error": {
+            container: "bg-red-200 border-red-400 text-red-500",
+            progressbar: "bg-red-600"
+        }
     };
     const MAX_VISIBLE_NOTIFICATIONS = 3;
     const MAX_NOTIFICATIONS = 16;
@@ -37,12 +52,17 @@
 
         const notificationIdx = nextNotificationIdx++;
         notifications[notificationIdx] = {...msg, key: notificationIdx};
-        setTimeout(() => {
-            notifications[notificationIdx] = undefined;
-            if (notificationIdx < nextNotificationIdx) {
-                nextNotificationIdx = notificationIdx;
-            }
-        }, msg.duration);
+    }
+
+    function closeNotification(id: number) {
+        notifications[id] = undefined;
+        if (id < nextNotificationIdx) {
+            nextNotificationIdx = id;
+        }
+    }
+
+    function onNotificationMounted(elem: HTMLElement, id: KeyedNotification) {
+        setTimeout(() => closeNotification(id.key), id.duration);
     }
 
     export function showInfo(msg: string) {
@@ -72,12 +92,18 @@
     }
 </script>
 
-{#snippet snackbarMsg(msg: Notification)}
+{#snippet snackbarMsg(msg: KeyedNotification)}
+    {@const colors = MSG_COLORS[msg.level]}
     <div
         transition:fly={{duration: 300, x: 500, opacity: 100}}
-        class={`p-4 mb-2 max-h-24 rounded-lg border-2 ${MSG_COLORS[msg.level]}`}
+        class={`mb-2 max-h-24 rounded-lg border-2 ${colors.container}`}
+        use:onNotificationMounted={msg}
     >
-        <p class="wrap-anywhere overflow-ellipsis">{msg.content}</p>
+        <div class="flex justify-between p-4">
+            <p class="wrap-anywhere overflow-ellipsis">{msg.content}</p>
+            <CloseOutline size="md" class="my-auto cursor-pointer" onclick={() => closeNotification(msg.key)}></CloseOutline>
+        </div>
+        <div style={`animation: progressbar ${msg.duration}ms linear forwards;`} class={`w-full h-1 ${colors.progressbar}`}></div>
     </div>
 {/snippet}
 

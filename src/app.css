@@ -58,3 +58,12 @@ html.dark {
 .sideitem:hover .dots {
   display: block;
 }
+
+@keyframes progressbar {
+    0% {
+        width: 100%;
+    }
+    100% {
+        width: 0px;
+    }
+}
