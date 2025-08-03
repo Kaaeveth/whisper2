@@ -3,10 +3,16 @@ pub(crate) mod backend_commands;
 pub(crate) mod chat_commands;
 pub(crate) mod ollama_commands;
 
+#[tauri::command]
+pub fn is_debug() -> bool {
+    return cfg!(debug_assertions);
+}
+
 #[macro_export]
 macro_rules! init {
     () => {
         tauri::generate_handler![
+            crate::commands::is_debug,
             crate::commands::process_commands::execute,
             crate::commands::process_commands::terminate,
             // Backend

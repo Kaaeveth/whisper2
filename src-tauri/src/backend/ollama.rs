@@ -40,18 +40,17 @@ pub struct OllamaBackend(pub SharedBackendImpl<OllamaBackendInner>);
 impl OllamaBackend {
     pub fn new(mut api_url: Url) -> SharedBackend {
         OllamaBackendInner::prepare_api_url(&mut api_url);
-        let backend: Box<dyn Backend> = Box::new(OllamaBackendInner {
+
+        let shared_backend: SharedBackend = Arc::new(RwLock::new(OllamaBackendInner {
             http_client: Client::new(),
             api_url: api_url,
             models: Vec::new(),
             self_ref: OnceCell::new(),
-        });
-
-        let shared_backend = Arc::new(RwLock::new(backend));
+        }));
         {
             let weak_backend = Arc::downgrade(&shared_backend);
             let guard = shared_backend.blocking_write();
-            let ollama = guard.as_any().downcast_ref::<OllamaBackendInner>().unwrap();
+            let ollama = (*guard).as_any().downcast_ref::<OllamaBackendInner>().unwrap();
             let _ = ollama.self_ref.set(weak_backend); // Cannot fail
         }
 
@@ -152,7 +151,7 @@ impl Backend for OllamaBackendInner {
                 continue;
             }
 
-            models.push(Arc::new(RwLock::new(Box::new(OllamaModel {
+            models.push(Arc::new(RwLock::new(OllamaModel {
                 info: ModelInfo {
                     name: m.name,
                     id: m.model,
@@ -166,7 +165,7 @@ impl Backend for OllamaBackendInner {
                     .upgrade()
                     .ok_or(Error::Unknown)?,
                 runtime_info: RwLock::new(None),
-            }))));
+            })));
         }
 
         self.models = models;

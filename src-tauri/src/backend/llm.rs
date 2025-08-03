@@ -10,11 +10,11 @@ use async_trait::async_trait;
 use crate::backend::chat::{ChatMessage, ChatResponse, parse_utc_datetime, serialize_utc_datetime};
 use crate::errors::Error;
 
-pub type SharedModel = Arc<RwLock<Box<dyn Model>>>;
-pub type SharedBackend = Arc<RwLock<Box<dyn Backend>>>;
-pub type WeakBackend = Weak<RwLock<Box<dyn Backend>>>;
+pub type SharedModel = Arc<RwLock<dyn Model>>;
+pub type SharedBackend = Arc<RwLock<dyn Backend>>;
+pub type WeakBackend = Weak<RwLock<dyn Backend>>;
 
-pub type SharedBackendImpl<T> = Arc<RwLock<Box<T>>>;
+pub type SharedBackendImpl<T> = Arc<RwLock<T>>;
 
 /// A backend hosting large language models, which
 /// manages multiple [Model]s.

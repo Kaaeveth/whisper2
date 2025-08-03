@@ -28,6 +28,7 @@ export default class AppContext {
     }
 
     private isInit: boolean = false;
+    private _debug: boolean = false;
     private ollamaBackend: OllamaBackend;
     private _models: Models = $state({ollama: []});
     private _flatModels: Model[] = $derived(Object.values(this._models).flat());
@@ -55,12 +56,18 @@ export default class AppContext {
         return this._settings;
     }
 
+    get debug(): boolean {
+        return this._debug;
+    }
+
     /**
      * Setup for all backends.
      * Should be called once at application startup.
      */
     async init(): Promise<void> {
         if(this.isInit) return;
+
+        this._debug = await invoke("is_debug");
 
         try {
             await this._settings.init();
