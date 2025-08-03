@@ -19,6 +19,7 @@
     const MAX_NOTIFICATIONS = 16;
 
     const notifications: Array<KeyedNotification|undefined> = $state(new Array(MAX_NOTIFICATIONS));
+    notifications.fill(undefined, 0, MAX_NOTIFICATIONS);
     const displayingNotifications: KeyedNotification[] = $derived(
       (notifications.filter(e => e) as KeyedNotification[]).slice(0, MAX_VISIBLE_NOTIFICATIONS).reverse()
     );
@@ -73,7 +74,7 @@
 
 {#snippet snackbarMsg(msg: Notification)}
     <div
-        transition:fly={{duration: 500, x: 500, opacity: 100}}
+        transition:fly={{duration: 300, x: 500, opacity: 100}}
         class={`p-4 mb-2 max-h-24 rounded-lg border-2 ${MSG_COLORS[msg.level]}`}
     >
         <p class="wrap-anywhere overflow-ellipsis">{msg.content}</p>

@@ -2,6 +2,7 @@
     import AppContext from "$lib/core/AppContext.svelte";
     import Settings from "$lib/core/Settings.svelte";
     import ModalDialog from "$lib/ModalDialog.svelte.ts";
+    import { showInfo } from "$lib/Snackbar.svelte";
     import { handleError } from "$lib/Util";
     import { Button, DarkMode, Heading, ButtonGroup, Toggle } from "flowbite-svelte";
 
@@ -82,4 +83,8 @@
     <div class="flex flex-col my-4">
         <Toggle bind:checked={autoScroll}>Autoscroll in chat dialog</Toggle>
     </div>
+    {#if ctx.debug}
+        <Heading tag="h4">Debug</Heading>
+        <Button onclick={() => showInfo("Debug")}>Show test snackbar</Button>
+    {/if}
 </div>
