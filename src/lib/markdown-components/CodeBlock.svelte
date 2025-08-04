@@ -1,7 +1,16 @@
 <script lang="ts" module>
-    import hljs from 'highlight.js';
+    import hljs from 'highlight.js/lib/core';
     import { ClipboardOutline } from 'flowbite-svelte-icons';
     import { Tooltip } from 'flowbite-svelte';
+    import type { LanguageFn } from 'highlight.js';
+    import { handleError } from '$lib/Util';
+
+    const getLanguagePath = (lang: string) => `../../../node_modules/highlight.js/es/languages/${lang}.js`;
+    // Note that the following lines will be replaced at build time by rollup.
+    // Vite requires a string literal here.
+    const languages = import.meta.glob("../../../node_modules/highlight.js/es/languages/*.js", {
+        import: "default"
+    }) as Record<string, () => Promise<LanguageFn>>;
 </script>
 
 <script lang="ts">
@@ -13,14 +22,25 @@
 
     let formatedContent: string = $state("");
     let codeElement: HTMLElement | undefined;
-    let hasLang: string | undefined = $state("");
+    let codeLanguage: string | undefined = $state("");
 
     $effect(() => {
-        hasLang = lang && hljs.getLanguage(lang) as string | undefined;
+        if(!hljs.getLanguage(lang)) {
+            // Try to load the language dynamically
+            const loadLanguage = languages[getLanguagePath(lang)];
+            if(loadLanguage !== undefined) {
+                loadLanguage().then(module => {
+                    hljs.registerLanguage(lang, module);
+                    codeLanguage = lang;
+                }).catch(e => handleError(e, {userMsg: "Error loading language"}));
+            }
+        } else {
+            codeLanguage = lang;
+        }
     });
 
     $effect(() => {
-        if(hasLang) {
+        if(codeLanguage) {
             formatedContent = hljs.highlight(content, {language: lang, ignoreIllegals: true}).value;
         } else {
             formatedContent = content;
@@ -63,13 +83,13 @@
 <pre>
     <div class="codeblock">
         <div class="codeblock-header hljs dark:!text-white">
-            <span>{hasLang ? lang : "Code"}</span>
+            <span>{codeLanguage ? lang : "Code"}</span>
             <button onclick={copyToClipboard}>
                 <ClipboardOutline size="sm"></ClipboardOutline>
                 <span>Copy</span>
             </button>
             <Tooltip trigger="click">Copied</Tooltip>
         </div>
-        <code class="hljs" bind:this={codeElement}>{#if hasLang}{@html formatedContent}{:else}{formatedContent}{/if}</code>
+        <code class="hljs" bind:this={codeElement}>{#if codeLanguage}{@html formatedContent}{:else}{formatedContent}{/if}</code>
     </div>
 </pre>
