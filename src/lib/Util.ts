@@ -15,9 +15,14 @@ export function formatByteSize(size: number): string {
     return `${size}.${decimals} ${UNIT_SUFFIX[prefixCount]}`;
 }
 
-export function handleError(e: any, level: Notification["level"] = "error") {
+export interface ErrorOptions {
+    userMsg: string,
+    level?: Notification["level"]
+}
+
+export function handleError(e: any, options?: ErrorOptions) {
     let showFn;
-    switch(level) {
+    switch(options?.level ?? "error") {
         case 'info':
             showFn = showInfo
             break;
@@ -31,10 +36,11 @@ export function handleError(e: any, level: Notification["level"] = "error") {
             break;
     }
 
+    const pre = (options?.userMsg ?? "Error") + ': ';
     if (e instanceof Error) {
-        showFn(e.message);
+        showFn(pre + e.message);
     } else if (typeof e === "string") {
-        showFn(e);
+        showFn(pre + e);
     } else {
         showFn("Unknown error");
     }

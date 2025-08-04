@@ -81,7 +81,7 @@
                 await props.chat!.save();
             }
         } catch(e: any) {
-            handleError(e);
+            handleError(e, {userMsg: "Prompt error"});
         } finally {
             generating = false;
             promptAbortController.abort();

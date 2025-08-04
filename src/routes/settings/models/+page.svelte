@@ -15,7 +15,7 @@
             await ctx.ollama.setUrl(url);
             await ctx.updateOllamaModels();
         } catch(e) {
-            handleError(e);
+            handleError(e, {userMsg: "Error updating Ollama endpoint"});
         }
     }
 </script>

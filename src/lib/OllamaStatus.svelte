@@ -38,7 +38,7 @@
             ollamaStarting = false;
             ollamaRunning = true;
         } catch(e) {
-            handleError(e);
+            handleError(e, {userMsg: "Could not boot Ollama"});
         }
     }
 </script>

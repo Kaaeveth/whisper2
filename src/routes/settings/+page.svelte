@@ -17,7 +17,7 @@
         try {
             await ctx.saveChatsToDisk();
         } catch(e) {
-            handleError(e);
+            handleError(e, {userMsg: "Error saving chats"});
         }
     }
 
@@ -51,7 +51,7 @@
                 await ctx.deleteAllChats();
             }
         } catch(e) {
-            handleError(e);
+            handleError(e, {userMsg: "Error deleting chats"});
         }
     }
 </script>
