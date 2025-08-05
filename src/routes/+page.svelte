@@ -25,6 +25,7 @@
     });
 
     // Load and save the selected model to disk when it changes
+    // We also update the selected model whenever the available models change
     const modelName = ctx.settings.get<string>(Settings.SELECTED_MODEL);
     let selectedModel = $derived(ctx.models.find(m => m.name === modelName));
     $effect(() => {

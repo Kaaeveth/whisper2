@@ -96,7 +96,7 @@
     {@const colors = MSG_COLORS[msg.level]}
     <div
         transition:fly={{duration: 300, x: 500, opacity: 100}}
-        class={`mb-2 max-h-24 rounded-lg border-2 ${colors.container}`}
+        class={`mb-2 max-h-24 z-50 rounded-lg border-2 ${colors.container}`}
         use:onNotificationMounted={msg}
     >
         <div class="flex justify-between p-4">
@@ -107,7 +107,7 @@
     </div>
 {/snippet}
 
-<div class="absolute z-50 right-4 top-4 w-96 h-96">
+<div class="absolute z-[-1] right-4 top-4 w-96 h-96">
     {#each displayingNotifications as msg (msg.key)}
         {@render snackbarMsg(msg)}
     {/each}
