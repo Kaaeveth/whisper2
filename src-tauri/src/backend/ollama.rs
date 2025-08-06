@@ -1,9 +1,6 @@
 use core::str;
 use std::{
-    ops::Deref,
-    process::{Child, Command},
-    sync::Arc,
-    time::Duration,
+    ops::Deref, path::{Path, PathBuf}, process::{Child, Command}, sync::Arc, time::Duration
 };
 use time::UtcDateTime;
 use tokio::{runtime::Handle, sync::RwLock};
@@ -37,13 +34,14 @@ pub struct OllamaBackend {
     models: Vec<SharedModel>,
     self_ref: WeakBackend<OllamaBackend>,
     ollama_proc: Option<Child>,
+    models_path: Option<PathBuf>
 }
 
 #[derive(Clone)]
 pub struct SharedOllamaBackend(pub SharedBackendImpl<OllamaBackend>);
 
 impl SharedOllamaBackend {
-    pub fn new(mut api_url: Url) -> SharedBackend {
+    pub fn new(mut api_url: Url, models_path: Option<PathBuf>) -> SharedBackend {
         OllamaBackend::prepare_api_url(&mut api_url);
 
         Arc::new_cyclic(|me| {
@@ -53,6 +51,7 @@ impl SharedOllamaBackend {
                 models: Vec::new(),
                 self_ref: me.clone(),
                 ollama_proc: None,
+                models_path: models_path
             })
         })
     }
@@ -81,6 +80,20 @@ impl OllamaBackend {
         OllamaBackend::prepare_api_url(&mut url);
 
         self.api_url = url;
+        Ok(())
+    }
+
+    pub fn get_models_path(&self) -> Option<&Path> {
+        self.models_path.as_ref().and_then(|p| Some(p.as_path()))
+    }
+
+    /// Sets the path where Ollama searches for models.
+    /// This method will attempt restart Ollama since
+    /// the path cannot be after start.
+    pub async fn set_models_path(&mut self, path: &Path) -> Result<(), errors::Error> {
+        self.models_path = Some(path.to_path_buf());
+        self.shutdown().await?;
+        self.boot().await?;
         Ok(())
     }
 
@@ -189,15 +202,20 @@ impl Backend for OllamaBackend {
 
     async fn boot(&mut self) -> Result<(), errors::Error> {
         if self.running().await {
+            info!("Boot - Ollama is already running");
             return Ok(());
         }
-
-        // Try to kill a non responding process
+        // Ollama may not be responding and must be killed first
         self.shutdown().await?;
+
+        info!("Booting Ollama");
+        let mut proc = Command::new("ollama");
+        proc.arg("serve");
+        if let Some(path) = &self.models_path {
+            proc.env("OLLAMA_MODELS", path.to_str().ok_or(errors::internal("Invalid Ollama models path"))?);
+        }
         self.ollama_proc = Some(
-            Command::new("ollama")
-                .arg("serve")
-                .env("OLLAMA_MODELS", "F:\\Models\\ollama")
+            proc
                 .spawn()
                 .map_err(|e| Error::BackendBoot {
                     reason: format!("{:?}", e),
@@ -207,8 +225,9 @@ impl Backend for OllamaBackend {
 
         const TRIES: u32 = 3;
         // Poll for Ollama boot
-        for _ in 0..TRIES {
+        for i in 0..TRIES {
             if self.running().await {
+                info!("Ollama booted after {} tries", i+1);
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_secs(2)).await;

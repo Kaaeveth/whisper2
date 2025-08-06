@@ -7,7 +7,6 @@ pub(crate) mod ollama;
 pub(crate) mod reader;
 
 use tauri::{AppHandle, Manager};
-use url::Url;
 
 use crate::backend::ollama::SharedOllamaBackend;
 use crate::backend::llm::SharedBackend;
@@ -20,8 +19,8 @@ pub fn build_backend_store(settings: &Settings) -> BackendStore {
 
     // Ollama backend
     let ollama_url = settings.ollama_url();
-    let ollama_url = Url::parse(&ollama_url).unwrap();
-    let ollama = SharedOllamaBackend::new(ollama_url);
+    let ollama_models_path = settings.ollama_models_path();
+    let ollama = SharedOllamaBackend::new(ollama_url, ollama_models_path);
     let backend_name: String;
     {
         let backend = ollama.blocking_read();
