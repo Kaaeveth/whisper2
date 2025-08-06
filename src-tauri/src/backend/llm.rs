@@ -12,7 +12,7 @@ use crate::errors::Error;
 
 pub type SharedModel = Arc<RwLock<dyn Model>>;
 pub type SharedBackend = Arc<RwLock<dyn Backend>>;
-pub type WeakBackend = Weak<RwLock<dyn Backend>>;
+pub type WeakBackend<T> = Weak<RwLock<T>>;
 
 pub type SharedBackendImpl<T> = Arc<RwLock<T>>;
 
@@ -137,8 +137,10 @@ pub trait Model: Send + Sync {
 
     /// The corresponding backend
     /// of the model.
+    /// May be [None] if the Backend
+    /// has been dropped already.
     #[allow(dead_code)]
-    fn backend(&self) -> SharedBackend;
+    fn backend(&self) -> Option<SharedBackend>;
 
     /// Whether the model is loaded
     async fn loaded(&self) -> Result<bool, Error>;

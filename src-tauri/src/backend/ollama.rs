@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 use time::UtcDateTime;
-use tokio::sync::{OnceCell, RwLock};
+use tokio::{runtime::Handle, sync::RwLock};
 
 use crate::{
     backend::{
@@ -35,30 +35,26 @@ pub struct OllamaBackend {
     http_client: Client,
     api_url: Url,
     models: Vec<SharedModel>,
-    self_ref: OnceCell<WeakBackend>,
+    self_ref: WeakBackend<OllamaBackend>,
+    ollama_proc: Option<Child>
 }
 
 #[derive(Clone)]
-pub struct OllamaBackend(pub SharedBackendImpl<OllamaBackendInner>);
+pub struct SharedOllamaBackend(pub SharedBackendImpl<OllamaBackend>);
 
 impl SharedOllamaBackend {
     pub fn new(mut api_url: Url) -> SharedBackend {
-        OllamaBackendInner::prepare_api_url(&mut api_url);
+        OllamaBackend::prepare_api_url(&mut api_url);
 
-        let shared_backend: SharedBackend = Arc::new(RwLock::new(OllamaBackendInner {
-            http_client: Client::new(),
-            api_url: api_url,
-            models: Vec::new(),
-            self_ref: OnceCell::new(),
-        }));
-        {
-            let weak_backend = Arc::downgrade(&shared_backend);
-            let guard = shared_backend.blocking_write();
-            let ollama = (*guard).as_any().downcast_ref::<OllamaBackendInner>().unwrap();
-            let _ = ollama.self_ref.set(weak_backend); // Cannot fail
-        }
-
-        return shared_backend;
+        Arc::new_cyclic(|me| {
+            RwLock::new(OllamaBackend {
+                http_client: Client::new(),
+                api_url: api_url,
+                models: Vec::new(),
+                self_ref: me.clone(),
+                ollama_proc: None
+            })
+        })
     }
 }
 
@@ -164,10 +160,7 @@ impl Backend for OllamaBackend {
                 },
                 backend: self
                     .self_ref
-                    .get()
-                    .ok_or(Error::Unknown)?
-                    .upgrade()
-                    .ok_or(Error::Unknown)?,
+                    .clone(),
                 runtime_info: RwLock::new(None),
             })));
         }
@@ -241,17 +234,20 @@ impl Backend for OllamaBackend {
 
 pub struct OllamaModel {
     info: ModelInfo,
-    backend: SharedBackend,
+    backend: WeakBackend<OllamaBackend>,
     runtime_info: RwLock<Option<RuntimeInfo>>,
 }
 
 impl OllamaModel {
+    /// Gets a strong reference to the backend.
+    /// Fails if the backend has already been dropped.
+    fn access_backend(&self) -> Result<Arc<RwLock<OllamaBackend>>, Error> {
+        self.backend.upgrade().ok_or(errors::internal("Backend is already disposed"))
+    }
+
     async fn load_model(&self, unload: bool) -> Result<(), Error> {
-        let backend = self.backend.read().await;
-        let backend = backend
-            .as_any()
-            .downcast_ref::<OllamaBackendInner>()
-            .ok_or(errors::internal("Expected Ollama backend"))?;
+        let strong_backend = self.access_backend()?;
+        let backend = strong_backend.read().await;
 
         let model_name = self.info.name.clone();
         let res = backend.call_backend("generate", Method::POST, move |req| {
@@ -270,8 +266,11 @@ impl Model for OllamaModel {
     fn info(&self) -> &ModelInfo {
         &self.info
     }
-    fn backend(&self) -> SharedBackend {
-        self.backend.clone()
+
+    fn backend(&self) -> Option<SharedBackend> {
+        self.backend.upgrade().map(|strong| {
+            strong as Arc<RwLock<dyn Backend>>
+        })
     }
 
     async fn loaded(&self) -> Result<bool, Error> {
@@ -299,7 +298,8 @@ impl Model for OllamaModel {
             }
         }
 
-        let backend = self.backend.read().await;
+        let strong_backend = self.access_backend()?;
+        let backend = strong_backend.read().await;
         let mut runtime_infos: Vec<RuntimeInfo> = backend.get_running_models().await?;
         let mut runtime_info = self.runtime_info.write().await;
 
@@ -334,13 +334,10 @@ impl Model for OllamaModel {
             history.iter().for_each(|msg| messages.push(msg.clone()));
             messages.push(content);
 
-            let backend = self.backend.read().await;
-            let ollama = backend
-                .as_any()
-                .downcast_ref::<OllamaBackendInner>()
-                .ok_or(Error::Internal("Could not get Ollama backend".into()))?;
+            let strong_backend = self.access_backend()?;
+            let backend = strong_backend.read().await;
 
-            res = ollama
+            res = backend
                 .call_backend("chat", Method::POST, move |req| {
                     req.json(&serde_json::json!({
                         "model": model_name,
