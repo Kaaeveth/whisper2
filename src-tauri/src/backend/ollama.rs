@@ -27,7 +27,11 @@ use url::Url;
 
 pub(crate) static OLLAMA_NAME: &'static str = "Ollama";
 
-pub struct OllamaBackendInner {
+pub(crate) fn not_ollama() -> errors::Error {
+    errors::internal("Backend is not Ollama")
+}
+
+pub struct OllamaBackend {
     http_client: Client,
     api_url: Url,
     models: Vec<SharedModel>,
@@ -37,7 +41,7 @@ pub struct OllamaBackendInner {
 #[derive(Clone)]
 pub struct OllamaBackend(pub SharedBackendImpl<OllamaBackendInner>);
 
-impl OllamaBackend {
+impl SharedOllamaBackend {
     pub fn new(mut api_url: Url) -> SharedBackend {
         OllamaBackendInner::prepare_api_url(&mut api_url);
 
@@ -58,7 +62,7 @@ impl OllamaBackend {
     }
 }
 
-impl OllamaBackendInner {
+impl OllamaBackend {
     async fn call_backend(
         &self,
         url: &str,
@@ -78,7 +82,7 @@ impl OllamaBackendInner {
 
     pub fn set_api_url(&mut self, url: impl IntoUrl) -> Result<(), errors::Error> {
         let mut url = url.into_url()?;
-        OllamaBackendInner::prepare_api_url(&mut url);
+        OllamaBackend::prepare_api_url(&mut url);
 
         self.api_url = url;
         Ok(())
@@ -96,8 +100,8 @@ impl OllamaBackendInner {
     }
 }
 
-impl Deref for OllamaBackend {
-    type Target = SharedBackendImpl<OllamaBackendInner>;
+impl Deref for SharedOllamaBackend {
+    type Target = SharedBackendImpl<OllamaBackend>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -122,7 +126,7 @@ struct ModelDetail {
 }
 
 #[async_trait]
-impl Backend for OllamaBackendInner {
+impl Backend for OllamaBackend {
     fn name(&self) -> &str {
         OLLAMA_NAME
     }

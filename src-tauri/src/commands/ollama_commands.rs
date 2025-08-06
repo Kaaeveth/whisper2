@@ -1,10 +1,6 @@
 use tauri::State;
 
-use crate::{backend::{ollama::{OllamaBackendInner, OLLAMA_NAME}, BackendStore}, commands::backend_commands::get_backend, errors, settings::AppSettings, with_llm};
-
-fn not_ollama() -> errors::Error {
-    errors::internal("Backend is not Ollama")
-}
+use crate::{backend::{ollama::{not_ollama, OllamaBackend, OLLAMA_NAME}, BackendStore}, commands::backend_commands::get_backend, errors, settings::AppSettings, with_llm};
 
 #[tauri::command]
 pub async fn ollama_set_api_url(
@@ -17,7 +13,7 @@ pub async fn ollama_set_api_url(
     with_llm!(OLLAMA_NAME, &store, write|backend {
         let ollama = backend
             .as_any_mut()
-            .downcast_mut::<OllamaBackendInner>()
+            .downcast_mut::<OllamaBackend>()
             .ok_or(not_ollama())?;
 
         ollama.set_api_url(url)?;
@@ -33,7 +29,7 @@ pub async fn ollama_get_api_url(store: State<'_, BackendStore>)
     with_llm!(OLLAMA_NAME, &store, read|backend {
         let ollama = backend
             .as_any()
-            .downcast_ref::<OllamaBackendInner>()
+            .downcast_ref::<OllamaBackend>()
             .ok_or(not_ollama())?;
         Ok(ollama.get_api_url().to_string())
     })

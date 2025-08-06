@@ -17,6 +17,7 @@ pub enum Error {
     #[error("Internal error - There is a bug: {0}")]
     Internal(String),
     #[error("Internal error")]
+    #[allow(dead_code)]
     Unknown
 }
 

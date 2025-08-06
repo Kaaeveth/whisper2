@@ -8,7 +8,7 @@ pub(crate) mod reader;
 
 use url::Url;
 
-use crate::backend::ollama::OllamaBackend;
+use crate::backend::ollama::SharedOllamaBackend;
 use crate::backend::llm::SharedBackend;
 use crate::settings::Settings;
 
@@ -20,7 +20,7 @@ pub fn build_backend_store(settings: &Settings) -> BackendStore {
     // Ollama backend
     let ollama_url = settings.ollama_url();
     let ollama_url = Url::parse(&ollama_url).unwrap();
-    let ollama = OllamaBackend::new(ollama_url);
+    let ollama = SharedOllamaBackend::new(ollama_url);
     let backend_name: String;
     {
         let backend = ollama.blocking_read();
