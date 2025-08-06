@@ -1,4 +1,5 @@
 <script lang="ts" module>
+    import { info, warn, error } from '@tauri-apps/plugin-log';
     import { CloseOutline } from 'flowbite-svelte-icons';
     import { fly } from 'svelte/transition';
 
@@ -71,6 +72,7 @@
             level: "info",
             duration: 3000
         });
+        info(msg);
     }
 
     export function showWarning(msg: string) {
@@ -79,7 +81,7 @@
             level: "warn",
             duration: 4000
         });
-        console.warn(msg);
+        warn(msg);
     }
 
     export function showError(msg: string) {
@@ -88,7 +90,7 @@
             level: "error",
             duration: 4000
         });
-        console.error(msg);
+        error(msg);
     }
 </script>
 

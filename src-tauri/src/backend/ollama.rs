@@ -7,6 +7,7 @@ use std::{
 };
 use time::UtcDateTime;
 use tokio::{runtime::Handle, sync::RwLock};
+use log::{info, error};
 
 use crate::{
     backend::{
@@ -35,7 +36,7 @@ pub struct OllamaBackend {
     api_url: Url,
     models: Vec<SharedModel>,
     self_ref: WeakBackend<OllamaBackend>,
-    ollama_proc: Option<Child>
+    ollama_proc: Option<Child>,
 }
 
 #[derive(Clone)]
@@ -51,7 +52,7 @@ impl SharedOllamaBackend {
                 api_url: api_url,
                 models: Vec::new(),
                 self_ref: me.clone(),
-                ollama_proc: None
+                ollama_proc: None,
             })
         })
     }
@@ -157,9 +158,7 @@ impl Backend for OllamaBackend {
                     size: m.size,
                     capabilities: detail_res.capabilities,
                 },
-                backend: self
-                    .self_ref
-                    .clone(),
+                backend: self.self_ref.clone(),
                 runtime_info: RwLock::new(None),
             })));
         }
@@ -177,8 +176,7 @@ impl Backend for OllamaBackend {
     async fn running(&self) -> bool {
         let res = self
             .call_backend("version", Method::HEAD, |req| {
-                req
-                    .header("Cache", "no-store")
+                req.header("Cache", "no-store")
                     .timeout(Duration::from_secs(2))
             })
             .await;
@@ -194,15 +192,18 @@ impl Backend for OllamaBackend {
             return Ok(());
         }
 
-        // Try to kill a non responing process
+        // Try to kill a non responding process
         self.shutdown().await?;
-        self.ollama_proc = Some(Command::new("ollama")
-            .arg("serve")
-            .spawn()
-            .map_err(|e| Error::BackendBoot {
-                reason: format!("{:?}", e),
-                backend: self.name().to_owned()
-            })?);
+        self.ollama_proc = Some(
+            Command::new("ollama")
+                .arg("serve")
+                .env("OLLAMA_MODELS", "F:\\Models\\ollama")
+                .spawn()
+                .map_err(|e| Error::BackendBoot {
+                    reason: format!("{:?}", e),
+                    backend: self.name().to_owned(),
+                })?,
+        );
 
         const TRIES: u32 = 3;
         // Poll for Ollama boot
@@ -221,14 +222,14 @@ impl Backend for OllamaBackend {
     async fn shutdown(&mut self) -> Result<(), errors::Error> {
         self.models.clear();
         if let Some(mut proc) = self.ollama_proc.take() {
-            println!("Shutting down Ollama");
+            info!("Shutting down Ollama");
             if let Err(e) = proc.kill() {
                 return Err(Error::BackendBoot {
                     reason: format!("Failed to kill Ollama: {:?}", e),
-                    backend: self.name().to_owned()
+                    backend: self.name().to_owned(),
                 });
             }
-            println!("Ollama shutdown");
+            info!("Ollama shutdown");
         }
         Ok(())
     }
@@ -238,7 +239,7 @@ impl Drop for OllamaBackend {
     fn drop(&mut self) {
         Handle::current().block_on(async {
             if let Err(e) = self.shutdown().await {
-                eprintln!("{:?}", e);
+                error!("{:?}", e);
             }
         });
     }
@@ -254,7 +255,9 @@ impl OllamaModel {
     /// Gets a strong reference to the backend.
     /// Fails if the backend has already been dropped.
     fn access_backend(&self) -> Result<Arc<RwLock<OllamaBackend>>, Error> {
-        self.backend.upgrade().ok_or(errors::internal("Backend is already disposed"))
+        self.backend
+            .upgrade()
+            .ok_or(errors::internal("Backend is already disposed"))
     }
 
     async fn load_model(&self, unload: bool) -> Result<(), Error> {
@@ -262,12 +265,14 @@ impl OllamaModel {
         let backend = strong_backend.read().await;
 
         let model_name = self.info.name.clone();
-        let res = backend.call_backend("generate", Method::POST, move |req| {
-            req.json(&serde_json::json!({
-                "model": model_name,
-                "keep_alive": if unload {Some(0)} else {None}
-            }))
-        }).await?;
+        let res = backend
+            .call_backend("generate", Method::POST, move |req| {
+                req.json(&serde_json::json!({
+                    "model": model_name,
+                    "keep_alive": if unload {Some(0)} else {None}
+                }))
+            })
+            .await?;
         let _ = res.error_for_status()?;
         Ok(())
     }
@@ -280,9 +285,9 @@ impl Model for OllamaModel {
     }
 
     fn backend(&self) -> Option<SharedBackend> {
-        self.backend.upgrade().map(|strong| {
-            strong as Arc<RwLock<dyn Backend>>
-        })
+        self.backend
+            .upgrade()
+            .map(|strong| strong as Arc<RwLock<dyn Backend>>)
     }
 
     async fn loaded(&self) -> Result<bool, Error> {
