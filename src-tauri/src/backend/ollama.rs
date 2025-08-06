@@ -1,4 +1,6 @@
 use core::str;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::{
     ops::Deref, path::{Path, PathBuf}, process::{Child, Command}, sync::Arc, time::Duration
 };
@@ -211,9 +213,14 @@ impl Backend for OllamaBackend {
         info!("Booting Ollama");
         let mut proc = Command::new("ollama");
         proc.arg("serve");
+        #[cfg(windows)]
+        proc.creation_flags(0x08000000); // Hide cmd window on Windows
+
         if let Some(path) = &self.models_path {
+            info!("OLLAMA_MODELS directory: {:?}", &path);
             proc.env("OLLAMA_MODELS", path.to_str().ok_or(errors::internal("Invalid Ollama models path"))?);
         }
+
         self.ollama_proc = Some(
             proc
                 .spawn()

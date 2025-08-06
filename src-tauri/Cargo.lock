@@ -5196,7 +5196,7 @@ dependencies = [
 
 [[package]]
 name = "whisper2"
-version = "0.93.0"
+version = "0.93.1"
 dependencies = [
  "async-trait",
  "bytes",
