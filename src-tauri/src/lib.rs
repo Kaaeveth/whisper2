@@ -1,7 +1,7 @@
 use std::error::Error;
 use tauri::{App, Manager, Wry};
 
-use crate::{backend::build_backend_store, settings::build_settings};
+use crate::{backend::{build_backend_store, shutdown_backends}, settings::build_settings};
 
 mod commands;
 mod errors;
@@ -24,6 +24,15 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(setup)
         .invoke_handler(commands::init!())
-        .run(tauri::generate_context!())
-        .expect("Error starting Whisper2");
+        .build(tauri::generate_context!())
+        .expect("Error starting Whisper2")
+        .run(|app, event| match event {
+            tauri::RunEvent::ExitRequested { .. } => {
+                // Shutting down backends
+                // For some reason, Tauri doesn't drop managed state
+                // so we have to do that ourselves.
+                shutdown_backends(&app);
+            }
+            _ => {}
+        });
 }

@@ -1,7 +1,7 @@
 use core::str;
 use std::{
     ops::Deref,
-    process::{Command, ExitStatus},
+    process::{Child, Command},
     sync::Arc,
     time::Duration,
 };
@@ -17,7 +17,6 @@ use crate::{
         },
         reader::ndjson_reader::{NdJsonData, NdJsonReader},
     },
-    commands::process_commands::terminate,
     errors::{self, Error},
 };
 use async_trait::async_trait;
@@ -190,28 +189,20 @@ impl Backend for OllamaBackend {
         }
     }
 
-    async fn boot(&self) -> Result<(), errors::Error> {
-        let res: ExitStatus;
-        #[cfg(windows)]
-        {
-            // We start 'ollama app', which is the version running
-            // in the background (in the windows tray).
-            // This way, the user is informed that Ollama is running as well.
-            use std::process::Stdio;
-            res = Command::new("pwsh")
-                .arg("-WindowStyle")
-                .arg("Hidden")
-                .arg("-Command")
-                .arg("& 'ollama app.exe'")
-                .stdout(Stdio::null())
-                .status()?;
+    async fn boot(&mut self) -> Result<(), errors::Error> {
+        if self.running().await {
+            return Ok(());
         }
-        if !res.success() {
-            return Err(Error::BackendBoot {
-                backend: self.name().to_owned(),
-                reason: "Could not start 'ollama app'".into(),
-            });
-        }
+
+        // Try to kill a non responing process
+        self.shutdown().await?;
+        self.ollama_proc = Some(Command::new("ollama")
+            .arg("serve")
+            .spawn()
+            .map_err(|e| Error::BackendBoot {
+                reason: format!("{:?}", e),
+                backend: self.name().to_owned()
+            })?);
 
         const TRIES: u32 = 3;
         // Poll for Ollama boot
@@ -219,7 +210,7 @@ impl Backend for OllamaBackend {
             if self.running().await {
                 return Ok(());
             }
-            tokio::time::sleep(Duration::from_secs(2000)).await;
+            tokio::time::sleep(Duration::from_secs(2)).await;
         }
         Err(Error::BackendBoot {
             backend: self.name().to_owned(),
@@ -227,8 +218,29 @@ impl Backend for OllamaBackend {
         })
     }
 
-    async fn shutdown(&self) -> Result<(), errors::Error> {
-        terminate("ollama app").await.map(|_| ())
+    async fn shutdown(&mut self) -> Result<(), errors::Error> {
+        self.models.clear();
+        if let Some(mut proc) = self.ollama_proc.take() {
+            println!("Shutting down Ollama");
+            if let Err(e) = proc.kill() {
+                return Err(Error::BackendBoot {
+                    reason: format!("Failed to kill Ollama: {:?}", e),
+                    backend: self.name().to_owned()
+                });
+            }
+            println!("Ollama shutdown");
+        }
+        Ok(())
+    }
+}
+
+impl Drop for OllamaBackend {
+    fn drop(&mut self) {
+        Handle::current().block_on(async {
+            if let Err(e) = self.shutdown().await {
+                eprintln!("{:?}", e);
+            }
+        });
     }
 }
 

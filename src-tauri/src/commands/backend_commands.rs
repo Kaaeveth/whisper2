@@ -70,7 +70,7 @@ pub async fn is_backend_running(backend_name: &str, store: State<'_, BackendStor
 pub async fn boot_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    with_llm!(backend_name, &store, read|backend {
+    with_llm!(backend_name, &store, write|backend {
         backend.boot().await
     })
 }
@@ -79,7 +79,7 @@ pub async fn boot_backend(backend_name: &str, store: State<'_, BackendStore>)
 pub async fn shutdown_backend(backend_name: &str, store: State<'_, BackendStore>)
 -> Result<(), Error>
 {
-    with_llm!(backend_name, &store, read|backend {
+    with_llm!(backend_name, &store, write|backend {
         backend.shutdown().await
     })
 }

@@ -6,6 +6,7 @@ pub(crate) mod chat;
 pub(crate) mod ollama;
 pub(crate) mod reader;
 
+use tauri::{AppHandle, Manager};
 use url::Url;
 
 use crate::backend::ollama::SharedOllamaBackend;
@@ -31,4 +32,19 @@ pub fn build_backend_store(settings: &Settings) -> BackendStore {
     let lock: BackendStore = OnceLock::new();
     let _ = lock.set(backends);
     return lock;
+}
+
+pub fn shutdown_backends(app: &AppHandle) {
+    let store = app.state::<BackendStore>();
+    let backends = store.get().unwrap();
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .worker_threads(1)
+        .build()
+        .unwrap();
+    rt.block_on(async {
+        for backend in backends.values() {
+            let mut guard = backend.write().await;
+            let _ = guard.shutdown().await;
+        }
+    });
 }

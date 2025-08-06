@@ -43,10 +43,10 @@ pub trait Backend: Send + Sync + Any {
     async fn running(&self) -> bool;
 
     /// Starts the backend.
-    async fn boot(&self) -> Result<(), Error>;
+    async fn boot(&mut self) -> Result<(), Error>;
 
     /// Stops the backend.
-    async fn shutdown(&self) -> Result<(), Error>;
+    async fn shutdown(&mut self) -> Result<(), Error>;
 }
 
 impl dyn Backend {
