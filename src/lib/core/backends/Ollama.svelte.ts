@@ -9,6 +9,7 @@ export default class OllamaBackend extends BackendImpl {
     private _modelsPath: string | undefined = $state(undefined);
 
     async init(): Promise<void> {
+        await this.boot();
         this._apiUrl.href = await invoke("ollama_get_api_url");
         this._modelsPath = await invoke("ollama_get_models_path");
     }
