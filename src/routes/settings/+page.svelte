@@ -4,7 +4,7 @@
     import ModalDialog from "$lib/ModalDialog.svelte.ts";
     import { showInfo } from "$lib/Snackbar.svelte";
     import { handleError } from "$lib/Util";
-    import { Button, DarkMode, Heading, ButtonGroup, Toggle } from "flowbite-svelte";
+    import { Button, DarkMode, Heading, ButtonGroup, Toggle, Card } from "flowbite-svelte";
 
     const ctx = AppContext.getInstance();
     const dialog = ModalDialog.get();
@@ -68,23 +68,28 @@
 {/snippet}
 
 <div class="w-full">
-    <Heading tag="h4" class="font-medium mb-4">Theme</Heading>
-    <DarkMode/>
-    <div class="border-b border-gray-400 my-2"></div>
+    <Card class="p-4 w-full mb-6" size="lg">
+        <Heading tag="h4" class="font-medium mb-4">Theme</Heading>
+        <DarkMode/>
+    </Card>
 
-    <Heading tag="h4" class="font-medium my-4">Chats</Heading>
-    <div class="flex gap-2">
-        <ButtonGroup>
-            <Button outline onclick={() => saveChats()}>Export</Button>
-            <Button outline onclick={() => importChats()}>Import</Button>
-        </ButtonGroup>
-        <Button color="red" onclick={() => deleteChats()}>Delete</Button>
-    </div>
-    <div class="flex flex-col my-4">
-        <Toggle bind:checked={autoScroll}>Autoscroll in chat dialog</Toggle>
-    </div>
+    <Card class="p-4 w-full mb-6" size="lg">
+        <Heading tag="h4" class="font-medium mb-4">Chats</Heading>
+        <div class="flex gap-2">
+            <ButtonGroup>
+                <Button outline onclick={() => saveChats()}>Export</Button>
+                <Button outline onclick={() => importChats()}>Import</Button>
+            </ButtonGroup>
+            <Button color="red" onclick={() => deleteChats()}>Delete</Button>
+        </div>
+        <div class="flex flex-col mt-4">
+            <Toggle bind:checked={autoScroll}>Autoscroll in chat dialog</Toggle>
+        </div>
+    </Card>
     {#if ctx.debug}
-        <Heading tag="h4">Debug</Heading>
-        <Button onclick={() => showInfo("Debug")}>Show test snackbar</Button>
+        <Card class="p-4 w-full" size="lg">
+            <Heading tag="h4">Debug</Heading>
+            <Button onclick={() => showInfo("Debug")}>Show test snackbar</Button>
+        </Card>
     {/if}
 </div>

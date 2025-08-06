@@ -31,7 +31,7 @@ export default abstract class BackendImpl implements Backend {
      * Querys all running models and returns their names.
      * @returns Names of running models
      */
-    async getRunningModels(): Promise<RunningInfo[]> {
+    async getRunningModels(): Promise<RuntimeInfo[]> {
         return invoke("get_running_models_in_backend", {
             backendName: this.name,
         });
@@ -64,7 +64,7 @@ export default abstract class BackendImpl implements Backend {
     }
 }
 
-interface RunningInfo {
+interface RuntimeInfo {
     size_vram: number;
     expires_at: Date;
     name: string;
@@ -86,16 +86,16 @@ export class ModelImpl implements Model {
         Object.assign(this, init);
     }
 
-    async getRunningInfo(): Promise<RunningInfo|undefined> {
+    async getRuntimeInfo(): Promise<RuntimeInfo> {
         try {
-            let res: RunningInfo = await invoke("get_model_runtime_info", {
+            let res: RuntimeInfo = await invoke("get_model_runtime_info", {
                 backendName: this.backend.name,
                 modelName: this.name
             });
             return res;
         } catch(e) {
-            handleError(e, "warn");
-            return undefined;
+            handleError(e, {level: "warn", userMsg: ""});
+            throw e
         }
     }
 
