@@ -1,11 +1,12 @@
-<script lang="ts">
+<script lang="ts" module>
     import AppContext from "$lib/core/AppContext.svelte";
     import { showInfo, showWarning } from "$lib/Snackbar.svelte";
     import { formatByteSize, handleError } from "$lib/Util";
-    import { Card, Heading, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
+    import { Card, Heading, P, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
     import { Input, Label, Button } from "flowbite-svelte";
     import { RefreshOutline } from "flowbite-svelte-icons";
     import { open } from '@tauri-apps/plugin-dialog';
+    import { type OllamaPullProgress } from "$lib/core/backends/Ollama.svelte.ts";
 
     const ctx = AppContext.getInstance();
     let updateModels = $state(ctx.updateModels());
@@ -14,6 +15,15 @@
     let ollamaModelsPath = $state(ctx.ollama.modelsPath);
     let ollamaModelsPathPlaceholder = $derived(ollamaModelsPath ? "" : "Ollama default");
     let updatingConfig = $state(false);
+
+    let ollamaTag = $state("");
+    let ollamaPullState: OllamaPullProgress|undefined = $state();
+    let ollamaPullStatePercentage = $derived.by(() => {
+        if(ollamaPullState?.completed && ollamaPullState?.total) {
+            return ollamaPullState.completed / ollamaPullState.total * 100;
+        }
+        return undefined;
+    });
 
     async function updateOllamaUrl() {
         try {
@@ -28,7 +38,7 @@
 
     async function updateOllamaModelsPath() {
         try {
-            if(ollamaModelsPath) {
+            if(ollamaModelsPath !== undefined && ollamaModelsPath.trim() !== "") {
                 await ctx.ollama.setModelsPath(ollamaModelsPath);
                 await ctx.updateOllamaModels();
                 showInfo("Path updated");
@@ -41,6 +51,7 @@
     }
 
     async function updateOllamaConfig() {
+        if(updatingConfig) return;
         updatingConfig = true;
         if (ollamaUrl !== ctx.ollama.apiUrl.href) {
             await updateOllamaUrl();
@@ -49,6 +60,26 @@
             await updateOllamaModelsPath();
         }
         updatingConfig = false;
+    }
+
+    async function pullOllamaModel() {
+        if (updatingConfig) return;
+        ollamaTag = ollamaTag.trim();
+        if (ollamaTag === "") return;
+
+        updatingConfig = true;
+        try {
+            await ctx.ollama.pullModel(ollamaTag, ev => {
+                ollamaPullState = ev;
+            });
+            await ctx.updateOllamaModels();
+            showInfo(`Pulled: ${ollamaTag}`);
+        } catch(e) {
+            handleError(e, {userMsg: "Could not pull model"});
+        } finally {
+            ollamaPullState = undefined;
+            updatingConfig = false;
+        }
     }
 
     async function selectModelsPath() {
@@ -102,7 +133,7 @@
     <Card class="p-4 w-full" size="lg">
         <Heading tag="h4" class="font-medium mb-4">Ollama</Heading>
         <div class="grid gap-3 gap-y-2 grid-cols-3">
-            <Label for="ollamaEndpoint">Endpoint</Label>
+            <Label for="ollamaEndpoint" class="col-span-3">Endpoint (only for instances not started by Whisper2)</Label>
             <Input bind:value={ollamaUrl} class="col-span-3" type="url" id="ollamaEndpoint" />
 
             <Label for="ollamaEndpoint" class="col-span-3">Models Path</Label>
@@ -113,8 +144,18 @@
         </div>
         <div class="grid gap-3 gap-y-2 grid-cols-3 mt-4">
             <Label for="ollamaAddModel">Add model</Label>
-            <Input class="row-start-2 col-span-2" placeholder="gpt-oss:latest" type="text" id="ollamaAddModel" />
-            <Button disabled class="row-start-2 col-start-3">Pull</Button>
+            <Input bind:value={ollamaTag} class="row-start-2 col-span-2" placeholder="gpt-oss:latest" type="text" id="ollamaAddModel" />
+            <Button
+                onclick={() => pullOllamaModel()}
+                disabled={!!ollamaPullState || ollamaTag.trim().length == 0}
+                class="row-start-2 col-start-3"
+            >
+                Pull
+            </Button>
+            {#if ollamaPullState}
+                {@const dlState = ollamaPullStatePercentage ? ` - ${ollamaPullStatePercentage!.toFixed(2)}%` : ""}
+                <P justify class="row-start-3 col-span-3" whitespace="pre">{ollamaPullState.status}{dlState}</P>
+            {/if}
         </div>
     </Card>
 </div>

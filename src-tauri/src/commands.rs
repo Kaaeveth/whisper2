@@ -37,7 +37,8 @@ macro_rules! init {
             crate::commands::ollama_commands::ollama_set_api_url,
             crate::commands::ollama_commands::ollama_get_api_url,
             crate::commands::ollama_commands::ollama_set_models_path,
-            crate::commands::ollama_commands::ollama_get_models_path
+            crate::commands::ollama_commands::ollama_get_models_path,
+            crate::commands::ollama_commands::ollama_pull_model
         ]
     };
 }

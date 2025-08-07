@@ -1,6 +1,14 @@
 import { SvelteURL } from "svelte/reactivity";
 import BackendImpl from "./Backend";
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
+
+export interface OllamaPullProgress {
+    status: string,
+    error?: string,
+    digest?: string,
+    total?: number,
+    completed?: number
+}
 
 export default class OllamaBackend extends BackendImpl {
     // This must be the same string used in the backend
@@ -47,5 +55,31 @@ export default class OllamaBackend extends BackendImpl {
             path
         });
         this._modelsPath = path;
+    }
+
+    /**
+     * Pulls a model from the Ollama registry.
+     * This methods waits until the model has been downloaded
+     * and throws in case of an error.
+     * @param tag The tag of the model e.g. gpt-oss:latest
+     * @param cb Called for events reporting the download progress
+     */
+    async pullModel(tag: string, cb: (ev: OllamaPullProgress) => void): Promise<void> {
+        return new Promise(async (resolve, reject) => {
+            let succeeded = false;
+            const progressChannel = new Channel<OllamaPullProgress>(ev => {
+                cb(ev);
+                if (ev.status === "success") {
+                    succeeded = true;
+                    resolve();
+                } else if ((ev.status === "done" && !succeeded) || ev.error) {
+                    reject(ev.error ?? "Unknown");
+                }
+            });
+            await invoke("ollama_pull_model", {
+                tag,
+                progressChannel: progressChannel
+            });
+        });
     }
 }

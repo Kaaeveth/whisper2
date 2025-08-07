@@ -3,7 +3,7 @@ use std::{
     ops::Deref, path::{Path, PathBuf}, process::{Child, Command}, sync::Arc, time::Duration
 };
 use time::UtcDateTime;
-use tokio::{runtime::Handle, sync::RwLock};
+use tokio::{runtime::Handle, sync::RwLock, sync::mpsc::Receiver};
 use log::{info, error};
 
 use crate::{
@@ -19,13 +19,23 @@ use crate::{
 };
 use async_trait::async_trait;
 use reqwest::{Client, IntoUrl, Method, RequestBuilder, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 pub(crate) static OLLAMA_NAME: &'static str = "Ollama";
 
 pub(crate) fn not_ollama() -> errors::Error {
     errors::internal("Backend is not Ollama")
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OllamaPullProgress {
+    #[serde(default)]
+    pub status: String,
+    pub error: Option<String>,
+    pub digest: Option<String>,
+    pub total: Option<u64>,
+    pub completed: Option<u64>
 }
 
 pub struct OllamaBackend {
@@ -106,6 +116,20 @@ impl OllamaBackend {
 
     pub fn get_api_url(&self) -> &Url {
         &self.api_url
+    }
+
+    pub async fn pull_model(&self, model_tag: &str) -> Result<Receiver<OllamaPullProgress>, errors::Error> {
+        let model_tag = model_tag.to_owned();
+        let res = self.call_backend("pull", Method::POST, move |req| {
+            req.json(&serde_json::json!({
+                "model": model_tag,
+                "stream": true
+            }))
+        }).await?;
+
+        let mut reader = NdJsonReader::<OllamaPullProgress>::new();
+        reader.start_reading_response(res);
+        reader.start_unwrapping_data(64)
     }
 }
 

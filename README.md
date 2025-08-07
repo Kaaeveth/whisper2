@@ -4,9 +4,16 @@
 Small and simple Windows desktop chat client for large language models written in Rust and Svelte.
 Only Ollama is currently supported, with OpenAI and RAG support in planning.
 
+> [Ollama](https://github.com/ollama/ollama) needs to be installed on your system!
+
+Whisper2 will start Ollama at startup if it is not already running but will communicate with an already running
+Ollama instance if their is one.
+
 ![whisper2-preview](https://github.com/user-attachments/assets/b787e09a-0b7a-42d2-8b48-26cd82f8080d)
 
 ## Compiling
+Install [Ollama](https://github.com/ollama/ollama) if you have not already done so.
+
 Development:
 ```
 npm run tauri dev
