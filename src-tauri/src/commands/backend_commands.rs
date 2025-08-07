@@ -1,7 +1,8 @@
 use std::sync::Arc;
+use log::trace;
 use tauri::{ipc::Channel, Manager, Resource, ResourceId, State};
 
-use crate::{backend::{chat::ChatMessage, llm::{ModelInfo, PromptEvent, PromptResponse, RuntimeInfo, SharedBackend, SharedModel}, BackendStore}, errors::Error};
+use crate::{backend::{chat::{ChatMessage, ChatResponse}, llm::{ModelInfo, PromptResponse, RuntimeInfo, SharedBackend, SharedModel}, BackendStore}, errors::Error};
 
 pub(super) fn get_backend(backend_name: &str, store: &BackendStore)
 -> Result<SharedBackend, Error>
@@ -168,25 +169,33 @@ pub async fn unload_model(backend_name: &str, model_name: &str, store: State<'_,
 pub async fn prompt_model(
     backend_name: &str, model_name: &str, store: State<'_, BackendStore>,
     content: ChatMessage, history: Vec<ChatMessage>, think: bool,
-    response_channel: Channel<PromptEvent>,
+    response_channel: Channel<ChatResponse>,
     app_handle: tauri::AppHandle
 ) -> Result<ResourceId, Error>
 {
     with_llm!(backend_name, &store, model_name, read|model {
         let mut res = model.prompt(content, &history, Some(think)).await?;
         drop(model); // Don't need to lock the model anymore
-        let mut prompts = res.get_prompts().ok_or(Error::Internal("Prompt receiver was already taken".into()))?;
+        let mut prompts = res.get_prompts()?;
         let rid = app_handle.resources_table().add_arc(Arc::new(PromptResponseResource(res)));
 
         tokio::spawn(async move {
             loop {
                 if let Some(prompt) = prompts.recv().await {
-                    let stop = prompt.is_stop();
-                    if response_channel.send(prompt).is_err() || stop {
+                    let done = prompt.done;
+                    if response_channel.send(prompt).is_err() || done {
                         break;
                     }
                 } else {
-                    let _ = response_channel.send(PromptEvent::Stop);
+                    // We need to send a "done" msg
+                    // in case the the generation gets aborted
+                    // for whatever reason since we cannot
+                    // close the response_channel
+                    let _ = response_channel.send(ChatResponse {
+                        done: true,
+                        message: ChatMessage::default()
+                    });
+                    trace!("Prompt generation ended prematurely");
                     break;
                 }
             }

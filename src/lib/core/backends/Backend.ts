@@ -70,11 +70,6 @@ interface RuntimeInfo {
     name: string;
 }
 
-interface PromptEvent {
-    type: "stop"|"message";
-    data: ChatResponse
-}
-
 export class ModelImpl implements Model {
     readonly name!: string;
     readonly id!: string;
@@ -132,11 +127,11 @@ export class ModelImpl implements Model {
         let rid = -1;
         const stream = new ReadableStream({
             start: async ctrl => {
-                const responseChannel = new Channel<PromptEvent>((chunk) => {
-                    if(chunk.type == "stop" || chunk.data.done) {
+                const responseChannel = new Channel<ChatResponse>((chunk) => {
+                    if(chunk.done) {
                         ctrl.close();
                     } else {
-                        ctrl.enqueue(chunk.data);
+                        ctrl.enqueue(chunk);
                     }
                 });
                 rid = await invoke("prompt_model", {

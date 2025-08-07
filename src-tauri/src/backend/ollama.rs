@@ -15,7 +15,7 @@ use crate::{
             Backend, Capability, Model, ModelInfo, PromptResponse, RuntimeInfo, SharedBackend,
             SharedBackendImpl, SharedModel, WeakBackend,
         },
-        reader::ndjson_reader::{NdJsonData, NdJsonReader},
+        reader::ndjson_reader::NdJsonReader,
     },
     errors::{self, Error},
 };
@@ -393,22 +393,7 @@ impl Model for OllamaModel {
         }
 
         let reader = NdJsonReader::new();
-        let sink = reader.data_intake();
-
-        tokio::spawn(async move {
-            while let Ok(chunk) = res.chunk().await {
-                if let Some(chunk) = chunk {
-                    if let Err(_) = sink.send(NdJsonData::Data(chunk)).await {
-                        break;
-                    }
-                } else {
-                    // We don't remove the data from the stream using "chunk".
-                    // So if we don't have any more data, we need to break manually
-                    break;
-                }
-            }
-            let _ = sink.send(NdJsonData::End).await;
-        });
+        reader.start_reading_response(res);
 
         Ok(Box::new(reader))
     }

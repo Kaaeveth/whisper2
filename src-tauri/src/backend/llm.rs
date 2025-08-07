@@ -72,29 +72,6 @@ pub enum Capability {
     Embedding
 }
 
-/// A token (or chunk) of a chat completion.
-/// If [PromptEvent::Stop], then [ChatResponse.done]
-/// should also be true.
-/// [PromptEvent::Stop] is mainly used for cancellation
-/// of ongoing chat completions.
-/// TODO: Add stop reason or error variant
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type", content = "data")]
-#[serde(rename_all = "snake_case")]
-pub enum PromptEvent {
-    Message(ChatResponse),
-    Stop
-}
-
-impl PromptEvent {
-    pub fn is_stop(&self) -> bool {
-        if let Self::Stop = &self {
-            return true;
-        }
-        false
-    }
-}
-
 /// Information about a loaded model.
 /// See [ModelInfo] for general information.
 #[derive(Clone, Deserialize, Serialize)]
@@ -108,8 +85,8 @@ pub struct RuntimeInfo {
 #[async_trait]
 pub trait PromptResponse: Send + Sync {
     /// Sink for receiving generated tokens.
-    /// If None, then the Receiver was already taken.
-    fn get_prompts(&mut self) -> Option<Receiver<PromptEvent>>;
+    /// Will fail if the promp sink has already been taken.
+    fn get_prompts(&mut self) -> Result<Receiver<ChatResponse>, Error>;
 
     /// Stops an ongoing chat completion.
     /// Has no effect if already completed.
