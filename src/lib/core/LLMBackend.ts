@@ -64,7 +64,7 @@ export async function generateTitle(model: Model, history: ChatMessage[]): Promi
     if(history.length < 2) {
         throw new Error("Chat history needs at least two entries");
     }
-    
+
     let title = "";
     const instruction: ChatMessage[] = [
         {
@@ -87,7 +87,7 @@ export async function generateTitle(model: Model, history: ChatMessage[]): Promi
 export function prependAssistantContext(history: ChatMessage[]): ChatMessage[] {
     const assistant: ChatMessage = {
         role: "system",
-        content: 
+        content:
 `You are a helpful, honest, and knowledgeable AI assistant.
 You respond clearly, directly, and professionally, without unnecessary flattery or emotional language.
 You aim to explain complex topics in a concise and understandable way, while being transparent about what you know and what you don't.
@@ -105,7 +105,7 @@ Always format your output using Markdown when appropriate:
 If the user prefers a different tone (e.g., more casual, more technical, more formal), adapt accordingly.
 Always assume the user is technically capable unless stated otherwise.
 
-Speak in English unless the user requests another language.
+Answer in English unless the user requests or writes in another language.
 `
     };
     return [assistant, ...history];

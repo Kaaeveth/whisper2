@@ -57,6 +57,24 @@ impl dyn Backend {
     pub fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+
+    pub fn to_mut<'a, T>(&'a mut self) -> Option<&'a mut T>
+    where
+        T: Backend
+    {
+        self
+            .as_any_mut()
+            .downcast_mut::<T>()
+    }
+
+    pub fn to<'a, T>(&'a self) -> Option<&'a T>
+    where
+        T: Backend
+    {
+        self
+            .as_any()
+            .downcast_ref::<T>()
+    }
 }
 
 /// Capabilities of a model.

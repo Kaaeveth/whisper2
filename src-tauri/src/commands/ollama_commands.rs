@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use tauri::State;
 
-use crate::{backend::{ollama::{not_ollama, OllamaBackend, OLLAMA_NAME}, BackendStore}, commands::backend_commands::get_backend, errors, settings::AppSettings, with_llm};
+use crate::{backend::{ollama::{not_ollama, OllamaBackend, OllamaPullProgress, OLLAMA_NAME}, BackendStore}, commands::backend_commands::get_backend, errors::{self, Error}, settings::AppSettings, with_llm};
 
 #[tauri::command]
 pub async fn ollama_set_api_url(
@@ -13,11 +13,7 @@ pub async fn ollama_set_api_url(
 -> Result<(), errors::Error>
 {
     with_llm!(OLLAMA_NAME, &store, write|backend {
-        let ollama = backend
-            .as_any_mut()
-            .downcast_mut::<OllamaBackend>()
-            .ok_or(not_ollama())?;
-
+        let ollama = backend.to_mut::<OllamaBackend>().ok_or(not_ollama())?;
         ollama.set_api_url(url)?;
         settings.read().await.store_ollama_url(url);
         Ok(())
@@ -29,10 +25,7 @@ pub async fn ollama_get_api_url(store: State<'_, BackendStore>)
 -> Result<String, errors::Error>
 {
     with_llm!(OLLAMA_NAME, &store, read|backend {
-        let ollama = backend
-            .as_any()
-            .downcast_ref::<OllamaBackend>()
-            .ok_or(not_ollama())?;
+        let ollama = backend.to::<OllamaBackend>().ok_or(not_ollama())?;
         Ok(ollama.get_api_url().to_string())
     })
 }
@@ -42,11 +35,7 @@ pub async fn ollama_get_models_path(store: State<'_, BackendStore>)
 -> Result<Option<String>, errors::Error>
 {
     with_llm!(OLLAMA_NAME, &store, read|backend {
-        let ollama = backend
-            .as_any()
-            .downcast_ref::<OllamaBackend>()
-            .ok_or(not_ollama())?;
-
+        let ollama = backend.to::<OllamaBackend>().ok_or(not_ollama())?;
         Ok(ollama.get_models_path().and_then(|path| Some(path.to_str().unwrap().to_owned())))
     })
 }
@@ -60,11 +49,7 @@ pub async fn ollama_set_models_path(
 -> Result<(), errors::Error>
 {
     with_llm!(OLLAMA_NAME, &store, write|backend {
-        let ollama = backend
-            .as_any_mut()
-            .downcast_mut::<OllamaBackend>()
-            .ok_or(not_ollama())?;
-
+        let ollama = backend.to_mut::<OllamaBackend>().ok_or(not_ollama())?;
         let path = PathBuf::from(path);
         let _ = path.try_exists()?;
 

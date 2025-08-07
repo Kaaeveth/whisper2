@@ -1,6 +1,4 @@
 use core::str;
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
 use std::{
     ops::Deref, path::{Path, PathBuf}, process::{Child, Command}, sync::Arc, time::Duration
 };
@@ -214,10 +212,19 @@ impl Backend for OllamaBackend {
         let mut proc = Command::new("ollama");
         proc.arg("serve");
         #[cfg(windows)]
-        proc.creation_flags(0x08000000); // Hide cmd window on Windows
+        {
+            use std::os::windows::process::CommandExt;
+            proc.creation_flags(0x08000000); // Hide cmd window on Windows
+        }
 
         if let Some(path) = &self.models_path {
             info!("OLLAMA_MODELS directory: {:?}", &path);
+            if !path.exists() {
+                return Err(Error::BackendBoot {
+                    reason: format!("Models directory '{:?}' does not exist", &path),
+                    backend: self.name().to_owned()
+                });
+            }
             proc.env("OLLAMA_MODELS", path.to_str().ok_or(errors::internal("Invalid Ollama models path"))?);
         }
 
@@ -370,8 +377,7 @@ impl Model for OllamaModel {
         history: &[ChatMessage],
         think: Option<bool>,
     ) -> Result<Box<dyn PromptResponse>, Error> {
-        let mut res: Response;
-        {
+        let res: Response = {
             let model_name = self.info.id.clone();
             let mut messages: Vec<ChatMessage> = Vec::with_capacity(history.len() + 1);
             history.iter().for_each(|msg| messages.push(msg.clone()));
@@ -380,7 +386,7 @@ impl Model for OllamaModel {
             let strong_backend = self.access_backend()?;
             let backend = strong_backend.read().await;
 
-            res = backend
+            backend
                 .call_backend("chat", Method::POST, move |req| {
                     req.json(&serde_json::json!({
                         "model": model_name,
@@ -389,8 +395,8 @@ impl Model for OllamaModel {
                         "messages": messages
                     }))
                 })
-                .await?;
-        }
+                .await?
+        };
 
         let reader = NdJsonReader::new();
         reader.start_reading_response(res);
