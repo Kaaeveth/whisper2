@@ -7,7 +7,7 @@ use crate::{backend::{chat::{ChatMessage, ChatResponse}, llm::{ModelInfo, Prompt
 pub(super) fn get_backend(backend_name: &str, store: &BackendStore)
 -> Result<SharedBackend, Error>
 {
-    store.get().unwrap()
+    store
         .get(backend_name)
         .and_then(|b| Some(b.clone()))
         .ok_or(Error::BackendNotFound(backend_name.to_owned()))

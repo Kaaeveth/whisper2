@@ -3,7 +3,7 @@ use std::{
     ops::Deref, path::{Path, PathBuf}, process::{Child, Command}, sync::Arc, time::Duration
 };
 use time::UtcDateTime;
-use tokio::{runtime::Handle, sync::RwLock, sync::mpsc::Receiver};
+use tokio::sync::{mpsc::Receiver, RwLock};
 use log::{info, error};
 
 use crate::{
@@ -294,7 +294,7 @@ impl Backend for OllamaBackend {
 
 impl Drop for OllamaBackend {
     fn drop(&mut self) {
-        Handle::current().block_on(async {
+        futures::executor::block_on(async {
             if let Err(e) = self.shutdown().await {
                 error!("{:?}", e);
             }

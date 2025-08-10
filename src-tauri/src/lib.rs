@@ -1,9 +1,9 @@
 use std::error::Error;
-use tauri::{App, Manager, Wry};
+use tauri::{App, AppHandle, Manager, Wry};
 
 use crate::{
-    backend::{build_backend_store, shutdown_backends},
-    settings::build_settings,
+    backend::{build_backend_store, BackendStore},
+    settings::{build_settings, Settings},
 };
 
 mod backend;
@@ -18,8 +18,14 @@ pub fn setup(app: &mut App<Wry>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[allow(deprecated)]
+pub fn cleanup_appstate(app: &AppHandle) {
+    let _ = app.unmanage::<BackendStore>();
+    let _ = app.unmanage::<Settings>();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run() -> i32 {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -29,13 +35,15 @@ pub fn run() {
         .invoke_handler(commands::init!())
         .build(tauri::generate_context!())
         .expect("Error starting Whisper2")
-        .run(|app, event| match event {
+        .run_return(|app, event| match event {
             tauri::RunEvent::ExitRequested { .. } => {
-                // Shutting down backends
+                // Shutting down backends and other app states.
                 // For some reason, Tauri doesn't drop managed state
-                // so we have to do that ourselves.
-                shutdown_backends(&app);
+                // if we do not unmanage that state ourselve.
+                // Even if we use run_return instead of run as to not use
+                // std::process::exit, drop is not called for the backends.
+                cleanup_appstate(&app);
             }
             _ => {}
-        });
+        })
 }
