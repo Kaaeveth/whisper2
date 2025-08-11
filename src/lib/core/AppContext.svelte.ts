@@ -71,8 +71,8 @@ export default class AppContext {
 
         try {
             await this._settings.init();
-            await this.ollamaBackend.init();
             this._chatStore = await load(AppContext.CHAT_STORE_PATH);
+            await this.ollamaBackend.init();
             await Promise.all([
                 this.loadChats(),
                 this.updateModels()
