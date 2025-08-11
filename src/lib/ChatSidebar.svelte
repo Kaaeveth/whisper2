@@ -4,7 +4,7 @@
     import SidebarButton from "$lib/SidebarButton.svelte";
     import ToggableElement from "$lib/ToggableElement.svelte";
     import { goto } from "$app/navigation";
-    import ModalDialog, { type ShowModalOptions } from "./ModalDialog.svelte.ts";
+    import { showModal, type ShowModalOptions } from "./ModalDialog.svelte";
 
     interface Props {
         chatTitles: string[];
@@ -38,7 +38,7 @@
     async function promptDeleteChat(idx: number) {
         if(idx < 0) return;
         deleteChatIdx = idx;
-        if(await ModalDialog.get().showModal(modalOptions) && props.onDeleteChat)
+        if(await showModal(modalOptions) && props.onDeleteChat)
             props.onDeleteChat(deleteChatIdx);
         deleteChatIdx = -1;
     }
@@ -73,7 +73,7 @@
                 onclick={(_) => onChatClicked(idx)}
             >
                 {#snippet subtext()}
-                    <TrashBinOutline 
+                    <TrashBinOutline
                         class="hidden dots"
                         color={"red"}
                         onclick={() => promptDeleteChat(idx)}>

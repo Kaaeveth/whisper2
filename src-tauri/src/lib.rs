@@ -36,7 +36,7 @@ pub fn run() -> i32 {
         .build(tauri::generate_context!())
         .expect("Error starting Whisper2")
         .run_return(|app, event| match event {
-            tauri::RunEvent::ExitRequested { .. } => {
+            tauri::RunEvent::Exit => {
                 // Shutting down backends and other app states.
                 // For some reason, Tauri doesn't drop managed state
                 // if we do not unmanage that state ourselve.

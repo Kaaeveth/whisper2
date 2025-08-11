@@ -2,7 +2,7 @@
     import { A } from 'flowbite-svelte';
     import type { Snippet } from 'svelte'
     import { openUrl } from "@tauri-apps/plugin-opener";
-    import ModalDialog, { type ShowModalOptions } from '$lib/ModalDialog.svelte.ts';
+    import {showModal, type ShowModalOptions } from '$lib/ModalDialog.svelte';
 
     interface Props {
         href?: string
@@ -20,7 +20,7 @@
 
     async function openLink(e: MouseEvent) {
         e.preventDefault();
-        if(href.length > 0 && await ModalDialog.get().showModal(modalOptions))
+        if(href.length > 0 && await showModal(modalOptions))
             openUrl(href);
     }
 </script>

@@ -1,13 +1,12 @@
 <script lang="ts">
     import AppContext from "$lib/core/AppContext.svelte";
     import Settings from "$lib/core/Settings.svelte";
-    import ModalDialog from "$lib/ModalDialog.svelte.ts";
+    import { showModal } from "$lib/ModalDialog.svelte";
     import { showInfo } from "$lib/Snackbar.svelte";
     import { handleError } from "$lib/Util";
     import { Button, DarkMode, Heading, ButtonGroup, Toggle, Card } from "flowbite-svelte";
 
     const ctx = AppContext.getInstance();
-    const dialog = ModalDialog.get();
     let autoScroll = $state(ctx.settings.get<boolean>(Settings.AUTO_SCROLL));
     $effect(() => {
         ctx.settings.set(Settings.AUTO_SCROLL, autoScroll);
@@ -23,7 +22,7 @@
 
     async function importChats() {
         try {
-            if (await dialog.showModal({
+            if (await showModal({
                 title: "Import Chats",
                 confirmColor: "primary",
                 confirmText: "Import",
@@ -40,7 +39,7 @@
 
     async function deleteChats() {
         try {
-            if (await dialog.showModal({
+            if (await showModal({
                 title: "Delete all Chats",
                 confirmColor: "red",
                 confirmText: "Delete",
