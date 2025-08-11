@@ -92,3 +92,13 @@ pub async fn ollama_pull_model(
         Ok(())
     })
 }
+
+#[tauri::command]
+pub async fn ollama_delete_model(tag: String, store: State<'_, BackendStore>)
+-> Result<(), errors::Error>
+{
+    with_llm!(OLLAMA_NAME, &store, write|backend {
+        let ollama = backend.to_mut::<OllamaBackend>().ok_or(not_ollama())?;
+        ollama.delete_model(tag).await
+    })
+}

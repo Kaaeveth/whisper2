@@ -32,6 +32,8 @@ npm run tauri build -- --no-bundle
 - [x] Import and Export of Chats
 - [x] Configuration of Ollama backend
 - [x] Proper dark mode
+- [x] Pulling & Deletion of Ollama models
+- [ ] Support for tooling
 - [ ] Support for vision models
 - [ ] RAG support for local files and knowledge bases
 - [ ] Support for MathML

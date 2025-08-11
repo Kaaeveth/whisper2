@@ -1,30 +1,42 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
-import type { Backend, Capability, Model, PromptOptions } from "$lib/core/LLMBackend";
+import { DeletableTag, type Backend, type Capability, type DeletableModel, type Model, type PromptOptions } from "$lib/core/LLMBackend";
 import type { ChatMessage, ChatResponse } from "$lib/core/Chat";
 import { handleError } from "$lib/Util";
 
 export default abstract class BackendImpl implements Backend {
     abstract readonly name: string;
+    private _models: Model[] = $state([]);
 
     async updateModels(): Promise<Model[]> {
         await invoke("update_models_in_backend", {
             backendName: this.name,
         });
-        let res: any[] = await invoke("get_models_for_backend", {
+        // NOTE: This is actually not(!) an array of instances [Model].
+        // Only the properties are present but not the methods!
+        let res: Model[] = await invoke("get_models_for_backend", {
             backendName: this.name,
         });
 
-        let models: ModelImpl[] = [];
+        let models: Model[] = [];
         for(let m of res) {
-            models.push(new ModelImpl({
-                id: m.model,
-                backend: this,
-                ...m
-            }));
+            models.push(this.buildModel(m));
         }
         console.log(res);
 
+        this._models = models;
         return models;
+    }
+
+    buildModel(m: Model): Model {
+        return new ModelImpl({
+            id: m.name,
+            backend: this,
+            ...(m as any)
+        });
+    }
+
+    get models(): Model[] {
+        return this._models;
     }
 
     /**
@@ -77,8 +89,17 @@ export class ModelImpl implements Model {
     readonly capabilities!: Capability[];
     readonly backend!: Backend;
 
-    public constructor(init: ModelImpl) {
+    // Ressource identifiers of ongoing chat completions
+    // in the backend.
+    protected promptGenIds: Set<number>;
+
+    public constructor(init: Model) {
         Object.assign(this, init);
+        this.promptGenIds = new Set();
+    }
+
+    isDeletable(): this is DeletableModel {
+        return (this as any)[DeletableTag] === true;
     }
 
     async getRuntimeInfo(): Promise<RuntimeInfo> {
@@ -115,11 +136,23 @@ export class ModelImpl implements Model {
         });
     }
 
-    unload(): Promise<void> {
-        return invoke("unload_model", {
+    async unload(): Promise<void> {
+        await this.stopAllPrompts();
+        await invoke("unload_model", {
             backendName: this.backend.name,
             modelName: this.name
         });
+    }
+
+    public async stopAllPrompts() {
+        for (const rid of this.promptGenIds) {
+            await this.stopPrompt(rid);
+        }
+    }
+
+    private async stopPrompt(rid: number) {
+        await invoke("stop_prompt", { rid });
+        this.promptGenIds.delete(rid);
     }
 
     async* prompt(content: ChatMessage, history?: ChatMessage[], options?: PromptOptions): AsyncIterable<ChatResponse> {
@@ -142,14 +175,15 @@ export class ModelImpl implements Model {
                     think: options?.think ?? false,
                     responseChannel
                 });
+                this.promptGenIds.add(rid);
             },
             cancel: async _ => {
-                await invoke("stop_prompt", {rid});
+                await this.stopPrompt(rid);
             }
         });
 
         options?.abort?.addEventListener('abort', async _ => {
-            await invoke("stop_prompt", {rid});
+            await this.stopPrompt(rid);
         });
 
         const reader = stream.getReader();

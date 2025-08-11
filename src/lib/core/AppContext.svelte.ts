@@ -6,9 +6,6 @@ import OllamaBackend from "./backends/Ollama.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { handleError } from "$lib/Util";
 
-interface Models {
-    ollama: Model[]
-}
 
 export default class AppContext {
     private static instance?: AppContext;
@@ -23,15 +20,13 @@ export default class AppContext {
     private static CHAT_STORE_PATH: string = "chats.json";
 
     constructor() {
-        this.ollamaBackend = new OllamaBackend();
         this._settings = new Settings();
     }
 
     private isInit: boolean = false;
     private _debug: boolean = false;
-    private ollamaBackend: OllamaBackend;
-    private _models: Models = $state({ollama: []});
-    private _flatModels: Model[] = $derived(Object.values(this._models).flat());
+    private ollamaBackend: OllamaBackend = new OllamaBackend();
+    private _flatModels: Model[] = $derived(Object.values(this.ollamaBackend.models).flat());
 
     // Store for saving and loading chats from disk
     // Initialized at startup
@@ -170,9 +165,8 @@ export default class AppContext {
     }
 
     async updateOllamaModels(): Promise<void> {
-        this._models.ollama = [];
         if(await this.ollamaBackend.running()) {
-            this._models.ollama = await this.ollamaBackend.updateModels();
+            await this.ollamaBackend.updateModels();
         }
     }
 

@@ -131,6 +131,27 @@ impl OllamaBackend {
         reader.start_reading_response(res);
         reader.start_unwrapping_data(64)
     }
+
+    pub async fn delete_model(&mut self, model_tag: String) -> Result<(), errors::Error> {
+        let mut model_idx = None;
+        for (i, model) in self.models.iter().enumerate() {
+            if model.read().await.info().name == model_tag {
+                model_idx = Some(i);
+                break;
+            }
+        }
+        let Some(model_idx) = model_idx else {
+            return Ok(());
+        };
+
+        let _ = self.call_backend("delete", Method::DELETE, move |req| {
+            req.json(&serde_json::json!({
+                "model": model_tag
+            }))
+        }).await?;
+        self.models.remove(model_idx);
+        Ok(())
+    }
 }
 
 impl Deref for SharedOllamaBackend {

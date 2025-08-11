@@ -1,6 +1,7 @@
 import { SvelteURL } from "svelte/reactivity";
-import BackendImpl from "./Backend";
+import BackendImpl, { ModelImpl } from "$lib/core/backends/Backend.svelte";
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { DeletableTag, type DeletableModel, type Model } from "../LLMBackend";
 
 export interface OllamaPullProgress {
     status: string,
@@ -20,6 +21,10 @@ export default class OllamaBackend extends BackendImpl {
         await this.boot();
         this._apiUrl.href = await invoke("ollama_get_api_url");
         this._modelsPath = await invoke("ollama_get_models_path");
+    }
+
+    buildModel(m: Model): Model {
+        return new OllamaModel(super.buildModel(m));
     }
 
     /**
@@ -81,5 +86,26 @@ export default class OllamaBackend extends BackendImpl {
                 progressChannel: progressChannel
             });
         });
+    }
+}
+
+export class OllamaModel extends ModelImpl implements DeletableModel {
+    readonly [DeletableTag] = true;
+    async delete(): Promise<void> {
+        const idx = this.backend.models.findIndex(m => m.id === this.id);
+        if(idx < 0) {
+            // This should not happen
+            throw new Error("bug: Model not found in backend");
+        }
+
+        await super.stopAllPrompts();
+        await invoke("ollama_delete_model", {
+            tag: this.id
+        });
+        await this.backend.updateModels();
+    }
+
+    public constructor(init: Model) {
+        super(init);
     }
 }

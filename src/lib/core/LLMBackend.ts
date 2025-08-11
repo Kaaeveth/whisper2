@@ -2,6 +2,7 @@ import type { ChatMessage, ChatResponse } from "./Chat";
 
 export interface Backend {
     readonly name: string;
+    readonly models: Model[];
 
     updateModels(): Promise<Model[]>;
     running(): Promise<boolean>;
@@ -44,7 +45,29 @@ export interface Model {
      */
     unload(): Promise<void>;
 
+    /**
+     * Starts a chat completion returning an iterable generator of tokens.
+     * @param content The prompt
+     * @param history The previous chat messages of the conversation
+     * @param options
+     */
     prompt(content: ChatMessage, history?: ChatMessage[], options?: PromptOptions): AsyncIterable<ChatResponse>;
+
+    /**
+     * Checks whether this model can be deleted.
+     * If `true`, then the `delete` method is defined.
+     */
+    isDeletable(): this is DeletableModel;
+}
+
+export const DeletableTag = Symbol("Deleteable");
+export interface DeletableModel extends Model {
+    [DeletableTag]: true;
+    /**
+     * Deletes the model in its backend.
+     * The model becomes unavailable afterwards.
+     */
+    delete(): Promise<void>;
 }
 
 export interface PromptOptions {
