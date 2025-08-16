@@ -99,7 +99,7 @@ impl OllamaBackend {
 
     /// Sets the path where Ollama searches for models.
     /// This method will attempt restart Ollama since
-    /// the path cannot be after start.
+    /// the path cannot be set after start.
     pub async fn set_models_path(&mut self, path: &Path) -> Result<(), errors::Error> {
         self.models_path = Some(path.to_path_buf());
         self.shutdown().await?;
@@ -150,6 +150,28 @@ impl OllamaBackend {
             }))
         }).await?;
         self.models.remove(model_idx);
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    fn kill_ollama(&mut self) -> Result<(), errors::Error> {
+        use std::os::windows::process::CommandExt;
+        // For some reason, terminating Ollama using GenerateConsoleCtrlEvent
+        // with either event does not terminate Ollama's children, i.e. its model runners.
+        // As a rather hacky solution, we just use taskkill if we have started the backend ourselves.
+        // This is not ideal as it disallows Ollama to clean up any resources, but it works for now.
+        let Some(proc) = self.ollama_proc.take() else {return Ok(());};
+        let _ = Command::new("taskkill")
+            .creation_flags(0x08000000) // No new window
+            .args(&["/PID", &proc.id().to_string(), "/T", "/F"])
+            .status()?;
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    fn kill_ollama(&mut self) -> Result<(), errors::Error> {
+        let Some(mut proc) = self.ollama_proc.take() else {return Ok(());};
+        proc.kill()?;
         Ok(())
     }
 }
@@ -286,7 +308,7 @@ impl Backend for OllamaBackend {
         // Poll for Ollama boot
         for i in 0..TRIES {
             if self.running().await {
-                info!("Ollama booted after {} tries", i+1);
+                info!("Ollama booted after {} tries (PID: {})", i+1, self.ollama_proc.as_ref().unwrap().id());
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_secs(2)).await;
@@ -298,17 +320,10 @@ impl Backend for OllamaBackend {
     }
 
     async fn shutdown(&mut self) -> Result<(), errors::Error> {
+        info!("Shutting down Ollama");
         self.models.clear();
-        if let Some(mut proc) = self.ollama_proc.take() {
-            info!("Shutting down Ollama");
-            if let Err(e) = proc.kill() {
-                return Err(Error::BackendBoot {
-                    reason: format!("Failed to kill Ollama: {:?}", e),
-                    backend: self.name().to_owned(),
-                });
-            }
-            info!("Ollama shutdown");
-        }
+        self.kill_ollama()?;
+        info!("Ollama shutdown");
         Ok(())
     }
 }
