@@ -59,6 +59,10 @@ html.dark {
   display: block;
 }
 
+.h-inherit {
+    height: inherit;
+}
+
 @keyframes progressbar {
     0% {
         width: 100%;

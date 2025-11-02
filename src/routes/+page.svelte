@@ -62,7 +62,7 @@
     }
 </script>
 
-<div class="flex flex-row h-screen">
+<div class="flex flex-row h-[96vh]">
     <ChatSidebar
         chatTitles={chatTitles}
         bind:selectedChatIdx

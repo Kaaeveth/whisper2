@@ -2,6 +2,7 @@
     import AppContext from '$lib/core/AppContext.svelte';
     import ModalDialog from '$lib/ModalDialog.svelte';
     import Snackbar from '$lib/Snackbar.svelte';
+    import WindowTitlebar from '$lib/WindowTitlebar.svelte';
     import { DarkMode } from 'flowbite-svelte';
 	import '../app.css';
     import { onMount } from 'svelte';
@@ -37,9 +38,10 @@
     {/if}
 </svelte:head>
 
+<WindowTitlebar title="Whisper2"></WindowTitlebar>
 <main class="contents">
 	{#await ctx.init()}
-		<div class="w-full h-screen flex">
+		<div class="w-full h-[96vh] flex">
 			<p class="m-auto font-medium text-3xl dark:text-gray-100">
 				Loading...
 			</p>
