@@ -39,7 +39,7 @@
 </svelte:head>
 
 <WindowTitlebar title="Whisper2"></WindowTitlebar>
-<main class="contents">
+<main class="h-[96vh] !overflow-y-auto">
 	{#await ctx.init()}
 		<div class="w-full h-[96vh] flex">
 			<p class="m-auto font-medium text-3xl dark:text-gray-100">

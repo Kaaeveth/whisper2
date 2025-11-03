@@ -38,7 +38,7 @@
     }
 </script>
 
-<div data-tauri-drag-region class="w-full h-8 flex justify-between border-b-1 dark:border-gray-600 select-none">
+<div data-tauri-drag-region class="w-full h-8 flex justify-between border-b-1 dark:border-gray-600 dark:bg-gray-900 bg-white select-none sticky top-0">
     <span class="dark:text-gray-200 font-bold pt-1 pl-2">
         {props.title}
     </span>

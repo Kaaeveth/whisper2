@@ -6,8 +6,8 @@
     let { children } = $props();
 </script>
 
-<div class="p-6 pl-8">
-    <div class="flex flex-row gap-6">
+<div class="p-6 pl-8 h-full">
+    <div class="flex flex-row gap-6 sticky top-4 select-none">
         <Button onclick={() => history.back()} color="alternative">
             <AngleLeftOutline></AngleLeftOutline>
         </Button>
@@ -15,7 +15,7 @@
     </div>
     <div class="flex flex-row mt-8">
         <!-- Sidebar -->
-        <nav class="flex flex-col gap-2 w-35">
+        <nav class="flex flex-col gap-2 w-35 select-none">
             <NavButton href="/settings">⚙️ General</NavButton>
             <NavButton href="/settings/models">🤖 Models</NavButton>
             <NavButton href="/settings/about">ℹ️ About</NavButton>
